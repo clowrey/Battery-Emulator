@@ -153,10 +153,6 @@ CAN_frame TESLA_3A1_VCFRONT_vehicleStatus = {
 
 
 
-
-
-
-
 /* Interesting CAN values to maybe add
 BO_ 786 ID312BMSthermal: 8 VehicleBus
  SG_ BMSdissipation312 : 0|10@1+ (0.02,0) [0|20] "kW"  Receiver
@@ -1252,17 +1248,17 @@ the first, for a few cycles, then stop all  messages which causes the contactor 
 
   unsigned long currentMillis = millis();
   //Send 30ms message
-  if (currentMillis - previousMillis30 >= INTERVAL_10_MS) {
+  if (currentMillis - previousMillis30 >= INTERVAL_30_MS) {
     // Check if sending of CAN messages has been delayed too much.
-    if ((currentMillis - previousMillis30 >= INTERVAL_10_MS_DELAYED) && (currentMillis > BOOTUP_TIME)) {
+    if ((currentMillis - previousMillis30 >= INTERVAL_30_MS_DELAYED) && (currentMillis > BOOTUP_TIME)) {
       set_event(EVENT_CAN_OVERRUN, (currentMillis - previousMillis30));
     } else {
       clear_event(EVENT_CAN_OVERRUN);
     }
     previousMillis30 = currentMillis;
 
-    if (datalayer.system.status.inverter_allows_contactor_closing) {
-      transmit_can(&TESLA_221_1, can_config.battery);
+    if (datalayer.system.status.inverter_allows_contactor_closing) { 
+      transmit_can(&TESLA_221_1, can_config.battery); // I tried lowering this to 10ms and that seemed to be too fast?? and the battery would open contactors every so often - not 100% sure was the cause
       transmit_can(&TESLA_221_2, can_config.battery);
       //transmit_can(&TESLA_221_3, can_config.battery);
       //transmit_can(&TESLA_321_VCFRONT_sensors, can_config.battery);
