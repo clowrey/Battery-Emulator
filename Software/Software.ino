@@ -53,7 +53,7 @@
 
 Preferences settings;  // Store user settings
 // The current software version, shown on webserver
-const char* version_number = "7.5.dev";
+const char* version_number = "7.6.dev";
 
 // Interval settings
 uint16_t intervalUpdateValues = INTERVAL_5_S;  // Interval at which to update inverter values / Modbus registers
@@ -584,7 +584,7 @@ void monitor_equipment_stop_button() {
   if (equipment_stop_behavior == LATCHING_SWITCH) {
     if (changed_state == PRESSED) {
       // Changed to ON – initiating equipment stop.
-      setBatteryPause(true, true, true);
+      setBatteryPause(true, false, true);
     } else if (changed_state == RELEASED) {
       // Changed to OFF – ending equipment stop.
       setBatteryPause(false, false, false);
@@ -594,7 +594,7 @@ void monitor_equipment_stop_button() {
 
       if (timeSincePress < equipment_button_long_press_duration) {
         // Short press detected, trigger equipment stop
-        setBatteryPause(true, true, true);
+        setBatteryPause(true, false, true);
       } else {
         // Long press detected, reset equipment stop state
         setBatteryPause(false, false, false);
