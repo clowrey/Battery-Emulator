@@ -274,11 +274,10 @@ static uint16_t battery_cell_min_v = 3700;
 static uint16_t battery_cell_deviation_mV = 0;  //contains the deviation between highest and lowest cell in mV
 static uint8_t battery_max_vno = 0;
 static uint8_t battery_min_vno = 0;
-static uint8_t battery_contactor = 0;  //State of contactor
 static uint8_t battery_hvil_status = 0;
 static uint8_t battery_packContNegativeState = 0;
 static uint8_t battery_packContPositiveState = 0;
-static uint8_t battery_packContactorSetState = 0;
+static uint8_t battery_packContactorSetState = 0; //State of contactor
 static uint8_t battery_packCtrsClosingAllowed = 0;
 static uint8_t battery_pyroTestInProgress = 0;
 //Fault codes
@@ -378,11 +377,10 @@ static uint16_t battery2_cell_min_v = 3700;
 static uint16_t battery2_cell_deviation_mV = 0;  //contains the deviation between highest and lowest cell in mV
 static uint8_t battery2_max_vno = 0;
 static uint8_t battery2_min_vno = 0;
-static uint8_t battery2_contactor = 0;  //State of contactor
 static uint8_t battery2_hvil_status = 0;
 static uint8_t battery2_packContNegativeState = 0;
 static uint8_t battery2_packContPositiveState = 0;
-static uint8_t battery2_packContactorSetState = 0;
+static uint8_t battery2_packContactorSetState = 0; //State of contactor
 static uint8_t battery2_packCtrsClosingAllowed = 0;
 static uint8_t battery2_pyroTestInProgress = 0;
 //Fault codes
@@ -558,7 +556,7 @@ void update_values_battery() {  //This function maps all the values fetched via 
 #endif  // TESLA_MODEL_3Y_BATTERY
 
   // Update webserver datalayer
-  datalayer_extended.tesla.status_contactor = battery_contactor;
+  datalayer_extended.tesla.status_contactor = battery_packContactorSetState;
   datalayer_extended.tesla.hvil_status = battery_hvil_status;
   datalayer_extended.tesla.packContNegativeState = battery_packContNegativeState;
   datalayer_extended.tesla.packContPositiveState = battery_packContPositiveState;
@@ -571,7 +569,7 @@ void update_values_battery() {  //This function maps all the values fetched via 
   printFaultCodesIfActive();
 
   Serial.print("STATUS: Contactor: ");
-  Serial.print(contactorText[battery_contactor]);  //Display what state the contactor is in
+  Serial.print(contactorText[battery_packContactorSetState]);  //Display what state the contactor is in
   Serial.print(", HVIL: ");
   Serial.print(hvilStatusState[battery_hvil_status]);
   Serial.print(", NegativeState: ");
@@ -701,13 +699,12 @@ void receive_can_battery(CAN_frame rx_frame) {
       break;
     case 0x20A:
       //Contactor state
-      battery_packContNegativeState = (rx_frame.data.u8[0] & 0x07);
-      battery_packContPositiveState = (rx_frame.data.u8[0] & 0x38) >> 3;
-      battery_contactor = (rx_frame.data.u8[1] & 0x0F);
-      battery_packContactorSetState = (rx_frame.data.u8[1] & 0x0F);
-      battery_packCtrsClosingAllowed = (rx_frame.data.u8[4] & 0x08) >> 3;
-      battery_pyroTestInProgress = (rx_frame.data.u8[4] & 0x20) >> 5;
-      battery_hvil_status = (rx_frame.data.u8[5] & 0x0F);
+      battery_packContNegativeState = (rx_frame.data.u8[0] & 0x07); // 0x07 = 0b00000111
+      battery_packContPositiveState = (rx_frame.data.u8[0] & 0x38) >> 3; // 0x38 = 00111000
+      battery_packContactorSetState = (rx_frame.data.u8[1] & 0x0F); // 0x0F = 0b00001111 HVP_packContactorSetState : 8|4@1+ (1,0) [0|9] ""
+      battery_packCtrsClosingAllowed = (rx_frame.data.u8[4] & 0x08) >> 3; // 0x08 = 0b00001000
+      battery_pyroTestInProgress = (rx_frame.data.u8[4] & 0x20) >> 5; // 0x20 = 0b00100000
+      battery_hvil_status = (rx_frame.data.u8[5] & 0x0F); // 0x0F = 0b00001111
       break;
     case 0x252:
       //Limits
@@ -912,7 +909,6 @@ void receive_can_battery2(CAN_frame rx_frame) {
       //Contactor state
       battery2_packContNegativeState = (rx_frame.data.u8[0] & 0x07);
       battery2_packContPositiveState = (rx_frame.data.u8[0] & 0x38) >> 3;
-      battery2_contactor = (rx_frame.data.u8[1] & 0x0F);
       battery2_packContactorSetState = (rx_frame.data.u8[1] & 0x0F);
       battery2_packCtrsClosingAllowed = (rx_frame.data.u8[4] & 0x08) >> 3;
       battery2_pyroTestInProgress = (rx_frame.data.u8[4] & 0x20) >> 5;
@@ -1178,7 +1174,7 @@ void update_values_battery2() {  //This function maps all the values fetched via
   printFaultCodesIfActive_battery2();
 
   Serial.print("STATUS: Contactor: ");
-  Serial.print(contactorText[battery2_contactor]);  //Display what state the contactor is in
+  Serial.print(contactorText[battery2_packContactorSetState]);  //Display what state the contactor is in
   Serial.print(", HVIL: ");
   Serial.print(hvilStatusState[battery2_hvil_status]);
   Serial.print(", NegativeState: ");
