@@ -17,7 +17,17 @@ String advanced_battery_processor(const String& var) {
     content += "<div style='background-color: #303E47; padding: 10px; margin-bottom: 10px;border-radius: 50px'>";
 
 #ifdef TESLA_BATTERY
-    content += "<h4>Contactor Status: " + String(datalayer_extended.tesla.status_contactor) + "</h4>";
+
+    // content += "<h4>Contactor Status: " + String(datalayer_extended.tesla.status_contactor) + "</h4>";
+    static const char* contactorText[] = {"UNKNOWN(0)",  "OPEN",        "CLOSING",    "BLOCKED", "OPENING",
+                                          "CLOSED",      "UNKNOWN(6)",  "WELDED",     "POS_CL",  "NEG_CL",
+                                          "UNKNOWN(10)", "UNKNOWN(11)", "UNKNOWN(12)"};
+    content += "<h4>Contactor Status: " + String(contactorText[datalayer_extended.tesla.status_contactor]) + "</h4>";
+    
+    
+
+
+
     content += "<h4>HVIL: " + String(datalayer_extended.tesla.hvil_status) + "</h4>";
     content += "<h4>Negative contactor: " + String(datalayer_extended.tesla.packContNegativeState) + "</h4>";
     content += "<h4>Positive contactor: " + String(datalayer_extended.tesla.packContPositiveState) + "</h4>";
