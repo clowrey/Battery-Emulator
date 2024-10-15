@@ -14,7 +14,7 @@ WiFiClient espClient;
 PubSubClient client(espClient);
 char mqtt_msg[MQTT_MSG_BUFFER_SIZE];
 MyTimer publish_global_timer(10000);  //publish timer - was 5000 or 5 seconds
-MyTimer check_global_timer(800);     // check timmer - low-priority MQTT checks, where responsiveness is not critical.
+MyTimer check_global_timer(800);      // check timmer - low-priority MQTT checks, where responsiveness is not critical.
 static const char* hostname = WiFi.getHostname();
 
 // Tracking reconnection attempts and failures
@@ -66,7 +66,8 @@ SensorConfig sensorConfigs[] = {
 
 #ifdef TESLA_MODEL_3Y_BATTERY
 
-    {"tesla_PCS_dcdcLvBusVolt", "Tesla Battery PCS DC-DC LV Bus Voltage", "{{ value_json.tesla_PCS_dcdcLvBusVolt }}", "V", "voltage"},
+    {"tesla_PCS_dcdcLvBusVolt", "Tesla Battery PCS DC-DC LV Bus Voltage", "{{ value_json.tesla_PCS_dcdcLvBusVolt }}",
+     "V", "voltage"},
 /*
     {"tesla_battery_total_discharge", "Tesla Battery Total Discharge", "{{ value_json.tesla_battery_total_discharge }}", "kWh", "energy"},
     {"tesla_battery_total_charge", "Tesla Battery Total Charge", "{{ value_json.tesla_battery_total_charge }}", "kWh", "energy"},
@@ -184,7 +185,7 @@ static void publish_common_info(void) {
 #ifdef TESLA_MODEL_3Y_BATTERY
 
       doc["tesla_PCS_dcdcLvBusVolt"] = ((float)datalayer.battery.status.tesla_PCS_dcdcLvBusVolt) * 0.0390625;
-/*
+      /*
       doc["tesla_battery_total_discharge"] = ((float)datalayer.battery.status.tesla_battery_total_discharge) / 1000.0;
       doc["tesla_battery_total_charge"] = ((float)datalayer.battery.status.tesla_battery_total_charge) / 1000.0;
 
@@ -218,7 +219,6 @@ static uint8_t  BMS_acChargeEnable = 0;            // 17|1@1+ (1,0) [0|0] ""
 */
 
 #endif
-
     }
 
     serializeJson(doc, mqtt_msg);
@@ -430,7 +430,6 @@ void mqtt_loop(void) {
       if (publish_global_timer.elapsed())  // Every 5s
       {
         publish_values();
-        
       }
     } else {
       if (connected_once)
