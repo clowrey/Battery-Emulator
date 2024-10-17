@@ -9,6 +9,8 @@
 #include "hw_stark.h"
 #elif defined(HW_SJB_V1)
 #include "hw_sjb_v1.h"
+#elif defined(HW_M5_ATOM)
+#include "hw_m5_atom.h"
 #endif
 
 #endif
