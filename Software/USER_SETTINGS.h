@@ -45,6 +45,7 @@
 /* Select hardware used for Battery-Emulator */
 #define HW_LILYGO
 //#define HW_STARK
+//#define HW_M5_ATOM // Only setup for dual CAN now - use ESP32 board "M5Atom" for uploading
 
 /* Other options */
 //#define DEBUG_VIA_USB  //Enable this line to have the USB port output serial diagnostic data while program runs (WARNING, raises CPU load, do not use for production)
