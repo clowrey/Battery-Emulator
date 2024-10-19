@@ -22,3 +22,6 @@ compile.bat
 
 # Ignore binary files
 *.bin
+
+USER_SETTINGS.h
+USER_SETTINGS.cpp
