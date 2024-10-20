@@ -25,3 +25,4 @@ compile.bat
 
 USER_SETTINGS.h
 USER_SETTINGS.cpp
+Software/USER_SETTINGS.cpp
