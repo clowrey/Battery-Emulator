@@ -987,8 +987,8 @@ the first, for a few cycles, then stop all  messages which causes the contactor 
     previousMillis30 = currentMillis;
 
     if (datalayer.system.status.inverter_allows_contactor_closing) {
-      transmit_can(&TESLA_221_1, can_config.battery);
-      transmit_can(&TESLA_221_2, can_config.battery);
+      //transmit_can(&TESLA_221_1, can_config.battery);
+      //transmit_can(&TESLA_221_2, can_config.battery);
 #ifdef DOUBLE_BATTERY
       if (datalayer.system.status.battery2_allows_contactor_closing) {
         transmit_can(&TESLA_221_1, can_config.battery_double);  // CAN2 connected to battery 2

@@ -27,13 +27,13 @@
 //#define RENAULT_ZOE_GEN2_BATTERY
 //#define SANTA_FE_PHEV_BATTERY
 //#define TESLA_MODEL_SX_BATTERY
-//#define TESLA_MODEL_3Y_BATTERY
+#define TESLA_MODEL_3Y_BATTERY
 //#define VOLVO_SPA_BATTERY
 //#define TEST_FAKE_BATTERY
 //#define DOUBLE_BATTERY  //Enable this line if you use two identical batteries at the same time (requires DUAL_CAN setup)
 
 /* Select inverter communication protocol. See Wiki for which to use with your inverter: https://github.com/dalathegreat/BYD-Battery-Emulator-For-Gen24/wiki */
-//#define BYD_CAN  //Enable this line to emulate a "BYD Battery-Box Premium HVS" over CAN Bus
+#define BYD_CAN  //Enable this line to emulate a "BYD Battery-Box Premium HVS" over CAN Bus
 //#define BYD_SMA //Enable this line to emulate a SMA compatible "BYD Battery-Box HVS 10.2KW battery" over CAN bus
 //#define BYD_MODBUS  //Enable this line to emulate a "BYD 11kWh HVM battery" over Modbus RTU
 //#define FOXESS_CAN       //Enable this line to emulate a "HV2600/ECS4100 battery" over CAN bus
@@ -44,9 +44,9 @@
 //#define SOLAX_CAN        //Enable this line to emulate a "SolaX Triple Power LFP" over CAN bus
 
 /* Select hardware used for Battery-Emulator */
-#define HW_LILYGO
+//#define HW_LILYGO
 //#define HW_STARK
-//#define HW_M5_ATOM // Only setup for dual CAN now - use ESP32 board "M5Atom" for uploading
+#define HW_M5_ATOM // Only setup for dual CAN now - use ESP32 board "M5Atom" for uploading
 
 /* Other options */
 //#define DEBUG_VIA_USB  //Enable this line to have the USB port output serial diagnostic data while program runs (WARNING, raises CPU load, do not use for production)
@@ -56,8 +56,8 @@
 //#define PWM_CONTACTOR_CONTROL //Enable this line to use PWM for CONTACTOR_CONTROL, which lowers power consumption and heat generation. CONTACTOR_CONTROL must be enabled.
 //#define DUAL_CAN  //Enable this line to activate an isolated secondary CAN Bus using add-on MCP2515 chip (Needed for some inverters / double battery)
 #define CRYSTAL_FREQUENCY_MHZ 8  //DUAL_CAN option, what is your MCP2515 add-on boards crystal frequency?
-//#define CAN_FD  //Enable this line to activate an isolated secondary CAN-FD bus using add-on MCP2518FD chip / Native CANFD on Stark board
-//#define USE_CANFD_INTERFACE_AS_CLASSIC_CAN // Enable this line if you intend to use the CANFD as normal CAN
+#define CAN_FD  //Enable this line to activate an isolated secondary CAN-FD bus using add-on MCP2518FD chip / Native CANFD on Stark board
+#define USE_CANFD_INTERFACE_AS_CLASSIC_CAN // Enable this line if you intend to use the CANFD as normal CAN
 //#define SERIAL_LINK_RECEIVER  //Enable this line to receive battery data over RS485 pins from another Lilygo (This LilyGo interfaces with inverter)
 //#define SERIAL_LINK_TRANSMITTER  //Enable this line to send battery data over RS485 pins to another Lilygo (This LilyGo interfaces with battery)
 #define WIFI
@@ -72,8 +72,8 @@
 //#define EQUIPMENT_STOP_BUTTON      // Enable this to allow an equipment stop button connected to the Battery-Emulator to disengage the battery
 
 /* MQTT options */
-// #define MQTT  // Enable this line to enable MQTT
-#define MQTT_SERVER "192.168.xxx.yyy"
+#define MQTT  // Enable this line to enable MQTT
+#define MQTT_SERVER "192.168.111.11"
 #define MQTT_PORT 1883
 
 /* Home Assistant options */
@@ -88,17 +88,17 @@
 
 /* Battery settings */
 // Predefined total energy capacity of the battery in Watt-hours
-#define BATTERY_WH_MAX 30000
+#define BATTERY_WH_MAX 58000
 // Increases battery life. If true will rescale SOC between the configured min/max-percentage
-#define BATTERY_USE_SCALED_SOC true
+#define BATTERY_USE_SCALED_SOC false
 // 8000 = 80.0% , Max percentage the battery will charge to (Inverter gets 100% when reached)
-#define BATTERY_MAXPERCENTAGE 8000
+#define BATTERY_MAXPERCENTAGE 10000
 // 2000 = 20.0% , Min percentage the battery will discharge to (Inverter gets 0% when reached)
-#define BATTERY_MINPERCENTAGE 2000
+#define BATTERY_MINPERCENTAGE 1000
 // 300 = 30.0A , BYD CAN specific setting, Max charge in Amp (Some inverters needs to be limited)
-#define BATTERY_MAX_CHARGE_AMP 300
+#define BATTERY_MAX_CHARGE_AMP 500
 // 300 = 30.0A , BYD CAN specific setting, Max discharge in Amp (Some inverters needs to be limited)
-#define BATTERY_MAX_DISCHARGE_AMP 300
+#define BATTERY_MAX_DISCHARGE_AMP 500
 
 /* Do not change any code below this line unless you are sure what you are doing */
 /* Only change battery specific settings in "USER_SETTINGS.h" */
