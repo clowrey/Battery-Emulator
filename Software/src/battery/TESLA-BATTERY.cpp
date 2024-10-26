@@ -5,23 +5,11 @@
 #include "../devboard/utils/events.h"
 #include "TESLA-BATTERY.h"
 
+#include "AsyncUDP.h"
+
 /* Do not change code below unless you are sure what you are doing */
 /* Credits: Most of the code comes from Per Carlen's bms_comms_tesla_model3.py (https://gitlab.com/pelle8/batt2gen24/) */
 
-static unsigned long previousMillis30 = 0;  // will store last time a 30ms CAN Message was send
-
-CAN_frame TESLA_221_1 = {
-    .FD = false,
-    .ext_ID = false,
-    .DLC = 8,
-    .ID = 0x221,
-    .data = {0x41, 0x11, 0x01, 0x00, 0x00, 0x00, 0x20, 0x96}};  //Contactor frame 221 - close contactors
-CAN_frame TESLA_221_2 = {
-    .FD = false,
-    .ext_ID = false,
-    .DLC = 8,
-    .ID = 0x221,
-    .data = {0x61, 0x15, 0x01, 0x00, 0x00, 0x00, 0x20, 0xBA}};  //Contactor Frame 221 - hv_up_for_drive
 
 static uint32_t battery_total_discharge = 0;
 static uint32_t battery_total_charge = 0;
@@ -969,6 +957,163 @@ void update_values_battery2() {  //This function maps all the values fetched via
 
 #endif  //DOUBLE_BATTERY
 
+
+
+static unsigned long previousMillis30 = 0;  // will store last time a 30ms CAN Message was send
+
+
+
+CAN_frame TESLA_13D = {
+    .FD = false,
+    .ext_ID = false,
+    .DLC = 6,
+    .ID = 0x13D,
+    .data = {0x05, 0x0E, 0xAA, 0x1A, 0xFF, 0x02}};  // 50ms CP_chargeStatus
+
+CAN_frame TESLA_221_1 = {
+    .FD = false,
+    .ext_ID = false,
+    .DLC = 8,
+    .ID = 0x221,
+    .data = {0x41, 0x11, 0x01, 0x00, 0x00, 0x00, 0x20, 0x96}};  // 50ms Contactor frame 221 - close contactors
+
+CAN_frame TESLA_221_2 = {
+    .FD = false,
+    .ext_ID = false,
+    .DLC = 8,
+    .ID = 0x221,
+    .data = {0x61, 0x15, 0x01, 0x00, 0x00, 0x00, 0x20, 0xBA}};  // 50ms Contactor Frame 221 - hv_up_for_drive
+
+CAN_frame TESLA_221_CHG_40 = {
+    .FD = false,
+    .ext_ID = false,
+    .DLC = 8,
+    .ID = 0x221,
+    .data = {0x40, 0x41, 0x05, 0x05, 0x00, 0x50, 0xF1, 0xEF}};  // 50ms VCFRONT_LVPowerState from AC charge log 5kw charging
+
+CAN_frame TESLA_221_CHG_41 = {
+    .FD = false,
+    .ext_ID = false,
+    .DLC = 8,
+    .ID = 0x221,
+    .data = {0x41, 0x01, 0x55, 0x00, 0x00, 0x00, 0x20, 0xDA}};  // 50ms VCFRONT_LVPowerState from AC charge log 5kw charging
+
+CAN_frame TESLA_21D = {
+    .FD = false,
+    .ext_ID = false,
+    .DLC = 8,
+    .ID = 0x21D,
+    .data = {0x2D, 0x0E, 0x00, 0x3F, 0x80, 0x00, 0x60, 0x10}};  // 100ms CP_evseStatus
+
+CAN_frame TESLA_23D = {
+    .FD = false,
+    .ext_ID = false,
+    .DLC = 6,
+    .ID = 0x23D,
+    .data = {0x05, 0x0E, 0xAA, 0x1A, 0xFF, 0x02}};  // 100ms CP_chargeStatus 
+
+CAN_frame TESLA_25D = {
+    .FD = false,
+    .ext_ID = false,
+    .DLC = 8,
+    .ID = 0x25D,
+    .data = {0xD8, 0x8C, 0x01, 0xB5, 0x4A, 0xC1, 0x0A, 0xE0}};  // 100ms CP_status
+
+CAN_frame TESLA_29D = {
+    .FD = false,
+    .ext_ID = false,
+    .DLC = 4,
+    .ID = 0x29D,
+    .data = {0x00, 0x00, 0x00, 0x20}};  // 50ms CP_dcChargeStatus
+
+CAN_frame TESLA_2BD = {
+    .FD = false,
+    .ext_ID = false,
+    .DLC = 4,
+    .ID = 0x2BD,
+    .data = {0x00, 0x00, 0x00, 0x00}};  // 50ms CP_dcPowerLimits
+
+CAN_frame TESLA_2B2 = {
+    .FD = false,
+    .ext_ID = false,
+    .DLC = 5,
+    .ID = 0x2B2,
+    .data = {0x88, 0x13, 0x00, 0x00, 0x00}};  // 50ms BMS_chargerRequest
+
+CAN_frame TESLA_321 = {
+    .FD = false,
+    .ext_ID = false,
+    .DLC = 8,
+    .ID = 0x321,
+    .data = {0x2C, 0xB6, 0xA8, 0x7F, 0x02, 0x7F, 0x00, 0x00}};  // 100ms VCFRONT_sensors
+
+CAN_frame TESLA_333 = {
+    .FD = false,
+    .ext_ID = false,
+    .DLC = 5,
+    .ID = 0x333,
+    .data = {0x84, 0x30, 0xE8, 0x07, 0x03}};  // 100ms UI_chargeRequest
+
+CAN_frame TESLA_3A1 = {
+    .FD = false,
+    .ext_ID = false,
+    .DLC = 8,
+    .ID = 0x3A1,
+    .data = {0x09, 0x62, 0x78, 0x9D, 0x08, 0x2C, 0x12, 0x5A}};  // 100ms VCFRONT_vehicleStatus
+
+CAN_frame TESLA_3A1_03 = {
+    .FD = false,
+    .ext_ID = false,
+    .DLC = 8,
+    .ID = 0x3A1,
+    .data = {0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0xD0, 0x64}};  // 100ms VCFRONT_vehicleStatus 5kw charging damien log
+
+CAN_frame TESLA_3A1_C8 = {
+    .FD = false,
+    .ext_ID = false,
+    .DLC = 8,
+    .ID = 0x3A1,
+    .data = {0xC8, 0x62, 0x49, 0x15, 0x01, 0x20, 0xE2, 0x1C}};  // 100ms VCFRONT_vehicleStatus 5kw charging damien log
+
+CAN_frame TESLA_545_1 = {
+    .FD = false,
+    .ext_ID = false,
+    .DLC = 8,
+    .ID = 0x545,
+    .data = {0x14, 0x00, 0x3F, 0x70, 0x9F, 0x01, 0x00, 0x00}};  // 50ms VCFRONT unknown message - calcualted with checksum
+
+CAN_frame TESLA_545_2 = {
+    .FD = false,
+    .ext_ID = false,
+    .DLC = 8,
+    .ID = 0x545,
+    .data = {0x03, 0x19, 0x64, 0x32, 0x19, 0x00, 0x00, 0x00}};  // 50ms VCFRONT unknown message - calcualted with checksum
+
+
+byte Count221=0;
+byte Count3A1=0;
+byte Count545=0;
+
+bool mux221=true;
+bool mux3A1=true;
+bool mux545=true;
+
+static unsigned long previousMillis100 = 0;  // will store last time a 100ms CAN Message was send
+static unsigned long previousMillis500 = 0;  // will store last time a 500ms CAN Message was send
+
+uint8_t CalcPCSChecksum(CAN_frame rx_frame)
+{
+   uint16_t checksum_calc=0;
+   for(int b=0; b<7; b++)
+   {
+      checksum_calc = checksum_calc + rx_frame.data.u8[b];
+   }
+   checksum_calc += rx_frame.ID + (rx_frame.ID >> 8);
+   checksum_calc &= 0xFF;
+
+   return (uint8_t)checksum_calc;
+}
+
 void send_can_battery() {
   /*From bielec: My fist 221 message, to close the contactors is 0x41, 0x11, 0x01, 0x00, 0x00, 0x00, 0x20, 0x96 and then, 
 to cause "hv_up_for_drive" I send an additional 221 message 0x61, 0x15, 0x01, 0x00, 0x00, 0x00, 0x20, 0xBA  so 
@@ -976,8 +1121,8 @@ two 221 messages are being continuously transmitted.   When I want to shut down,
 the first, for a few cycles, then stop all  messages which causes the contactor to open. */
 
   unsigned long currentMillis = millis();
-  //Send 30ms message
-  if (currentMillis - previousMillis30 >= INTERVAL_30_MS) {
+  if (currentMillis - previousMillis30 >= INTERVAL_30_MS) { //Send 30ms message
+
     // Check if sending of CAN messages has been delayed too much.
     if ((currentMillis - previousMillis30 >= INTERVAL_30_MS_DELAYED) && (currentMillis > BOOTUP_TIME)) {
       set_event(EVENT_CAN_OVERRUN, (currentMillis - previousMillis30));
@@ -986,18 +1131,107 @@ the first, for a few cycles, then stop all  messages which causes the contactor 
     }
     previousMillis30 = currentMillis;
 
+    transmit_can(&TESLA_13D, can_config.battery);
+    transmit_can(&TESLA_21D, can_config.battery);
+    transmit_can(&TESLA_23D, can_config.battery);
+    transmit_can(&TESLA_25D, can_config.battery);
+    transmit_can(&TESLA_29D, can_config.battery);
+    transmit_can(&TESLA_2BD, can_config.battery);
+    //transmit_can(&TESLA_2B2, can_config.battery); // probably should not send with BMS active
+
+    if(mux3A1)// VCFRONT_LVPowerState
+    {
+      TESLA_3A1_C8.data.u8[6] = (Count3A1<<4)|0xA;
+      TESLA_3A1_C8.data.u8[7]  = CalcPCSChecksum(TESLA_3A1_C8);
+      transmit_can(&TESLA_3A1_C8, can_config.battery);
+      mux3A1=false;
+    }
+    else
+    {
+      TESLA_3A1_03.data.u8[6] = (Count3A1<<4)|0xA;
+      TESLA_3A1_03.data.u8[7]  = CalcPCSChecksum(TESLA_3A1_03);
+      transmit_can(&TESLA_3A1_03, can_config.battery);
+      mux3A1=true;
+    }
+    Count3A1++;
+    if(Count3A1>0x0F) Count3A1=0;
+    
+
+    //transmit_can(&TESLA_221_1, can_config.battery);
+    transmit_can(&TESLA_221_2, can_config.battery); // VCfront Drive Mode
+
+/*
+    if(mux221)// VCFRONT_LVPowerState
+    {
+      TESLA_221_CHG_40.data.u8[6] = (Count221<<4)|0xA;
+      TESLA_221_CHG_40.data.u8[7]  = CalcPCSChecksum(TESLA_221_CHG_40);
+      transmit_can(&TESLA_221_CHG_40, can_config.battery);
+      mux221=false;
+    }
+    else
+    {
+      TESLA_221_CHG_41.data.u8[6] = (Count221<<4)|0xA;
+      TESLA_221_CHG_41.data.u8[7]  = CalcPCSChecksum(TESLA_221_CHG_41);
+      transmit_can(&TESLA_221_CHG_41, can_config.battery);
+      mux221=true;
+    }
+    Count221++;
+    if(Count221>0x0F) Count221=0;
+*/
+
+    /*
+    TESLA_221_1.data.u8[6] = (Count221<<4)|0xA;
+    TESLA_221_1.data.u8[7]  = CalcPCSChecksum(TESLA_221_1);
+    Count221++;
+    if(Count221>0x0F) Count221=0;
+    transmit_can(&TESLA_221_1, can_config.battery);
+    */
+
+
+    transmit_can(&TESLA_321, can_config.battery);
+    transmit_can(&TESLA_333, can_config.battery);
+
+
+    if(mux545)//VCFront unknown
+    {
+      TESLA_545_1.data.u8[6] = (Count545<<4)|0xA;
+      TESLA_545_1.data.u8[7]  = CalcPCSChecksum(TESLA_545_1);
+      transmit_can(&TESLA_545_1, can_config.battery);
+      mux545=false;
+    }
+    else
+    {
+      TESLA_545_2.data.u8[6] = (Count545<<4)|0xA;
+      TESLA_545_2.data.u8[7]  = CalcPCSChecksum(TESLA_545_1);
+      transmit_can(&TESLA_545_2, can_config.battery);
+      mux545=true;
+    }
+    Count545++;
+    if(Count545>0x0F) Count545=0;
+
     if (datalayer.system.status.inverter_allows_contactor_closing) {
       //transmit_can(&TESLA_221_1, can_config.battery);
       //transmit_can(&TESLA_221_2, can_config.battery);
-#ifdef DOUBLE_BATTERY
-      if (datalayer.system.status.battery2_allows_contactor_closing) {
-        transmit_can(&TESLA_221_1, can_config.battery_double);  // CAN2 connected to battery 2
-        transmit_can(&TESLA_221_2, can_config.battery_double);
-      }
-#endif  //DOUBLE_BATTERY
     }
   }
-}
+
+// Send 100ms CAN Message
+  if (currentMillis - previousMillis100 >= INTERVAL_100_MS) {
+    previousMillis100 = currentMillis;
+
+
+
+
+    
+  }
+
+  // Send 500ms CAN Message
+  if (currentMillis - previousMillis500 >= INTERVAL_500_MS) {
+    previousMillis500 = currentMillis;
+
+  }
+
+} // end send CAN battery
 
 void print_int_with_units(char* header, int value, char* units) {
   Serial.print(header);
