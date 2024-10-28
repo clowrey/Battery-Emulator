@@ -28,6 +28,8 @@
 #define MAX_CELL_VOLTAGE_LFP 3650       //Battery set to float watts if one cell goes over this value
 #define MIN_CELL_VOLTAGE_LFP 2968       //Battery is put into emergency stop if one cell goes below this value
 
+//#define EXP_TESLA_BMS_DIGITAL_HVIL    // Experimental parameter. Forces the transmission of additional CAN frames for experimental purposes, to test potential HVIL issues in 3/Y packs with newer firmware.
+
 void printFaultCodesIfActive();
 void printDebugIfActive(uint8_t symbol, const char* message);
 void print_int_with_units(char* header, int value, char* units);

@@ -33,6 +33,7 @@
 //#define DOUBLE_BATTERY  //Enable this line if you use two identical batteries at the same time (requires DUAL_CAN setup)
 
 /* Select inverter communication protocol. See Wiki for which to use with your inverter: https://github.com/dalathegreat/BYD-Battery-Emulator-For-Gen24/wiki */
+//#define AFORE_CAN //Enable this line to emulate an "Afore battery" over CAN bus
 #define BYD_CAN  //Enable this line to emulate a "BYD Battery-Box Premium HVS" over CAN Bus
 //#define BYD_SMA //Enable this line to emulate a SMA compatible "BYD Battery-Box HVS 10.2KW battery" over CAN bus
 //#define BYD_MODBUS  //Enable this line to emulate a "BYD 11kWh HVM battery" over Modbus RTU
@@ -75,6 +76,13 @@
 #define MQTT  // Enable this line to enable MQTT
 #define MQTT_SERVER "192.168.111.11"
 #define MQTT_PORT 1883
+#define MQTT_MANUAL_TOPIC_OBJECT_NAME  // Enable this to use custom MQTT topic, object ID prefix, and device name.    \
+                                       // WARNING: If this is not defined, the previous default naming format         \
+                                       // 'battery-emulator_esp32-XXXXXX' (based on hardware ID) will be used.        \
+                                       // This naming convention was in place until version 7.5.0.                    \
+                                       // Users should check the version from which they are updating, as this change \
+                                       // may break compatibility with previous versions of MQTT naming.              \
+                                       // Please refer to USER_SETTINGS.cpp for configuration options.
 
 /* Home Assistant options */
 #define HA_AUTODISCOVERY  // Enable this line to send Home Assistant autodiscovery messages. If not enabled manual configuration of Home Assitant is required
