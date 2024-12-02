@@ -56,6 +56,7 @@
 #define HW_LILYGO
 //#define HW_STARK
 //#define HW_3LB
+//#define HW_M5_ATOM_CANBUS_BASE // Setup for ESP32 ATOM Lite (NOT S3!) + ATOMIC CANBus Base (CA-IS3050G) SKU: A103 - use ESP32 board "M5Atom" for uploading
 
 /* Contactor settings. If you have a battery that does not activate contactors via CAN, configure this section */
 //#define CONTACTOR_CONTROL     //Enable this line to have the emulator handle automatic precharge/contactor+/contactor- closing sequence (See wiki for pins)
