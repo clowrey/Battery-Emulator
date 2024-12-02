@@ -55,7 +55,7 @@
 /* Select hardware used for Battery-Emulator */
 #define HW_LILYGO
 //#define HW_STARK
-//#define HW_M5_ATOM // Only setup for dual CAN now - use ESP32 board "M5Atom" for uploading
+//#define HW_M5_ATOM // Setup for ESP32 CAN on PortA Grove + dual CAN with DIY MCP2518 addon in AtomHub Proto - use ESP32 board "M5Atom" for uploading
 //#define HW_3LB
 
 /* Contactor settings. If you have a battery that does not activate contactors via CAN, configure this section */
