@@ -16,7 +16,7 @@ This software enables EV battery packs to be used for stationary storage. It ach
 ## Hardware requirements 📜
 This code fits on the LilyGo ESP32 T-CAN485 devboard , see https://github.com/Xinyuan-LilyGO/T-CAN485
 
-You will also need a complete EV battery. [See the battery compability list on which are supported.](https://github.com/dalathegreat/BYD-Battery-Emulator-For-Gen24/wiki#supported-batteries-list)
+You will also need a complete EV battery. [See the battery compatibility list on which are supported.](https://github.com/dalathegreat/BYD-Battery-Emulator-For-Gen24/wiki#supported-batteries-list)
 
 Finally, you will need a [compatible hybrid solar inverter](https://github.com/dalathegreat/BYD-Battery-Emulator-For-Gen24/wiki#supported-inverters-list), for example the "Fronius Gen24" or "GoodWe ET"
 
@@ -56,11 +56,24 @@ For more examples showing wiring, see each battery types own Wiki page. For inst
 6. Select which battery type you will use, along with other optional settings. This is done in the `USER_SETTINGS.h` file.
 7. Press `Verify` and `Upload` to send the sketch to the board.
 NOTE: In some cases, the LilyGo must be powered through the main power connector instead of USB-C
-      when performing the initial firsmware upload.
+      when performing the initial firmware upload.
 NOTE: On Mac, the following USB driver may need to be installed: https://github.com/WCHSoftGroup/ch34xser_macos
 
+NOTE: If you see garbled messages on the serial console, change the serial console to match the baud rate to the code, currently 115200.
+
 This video explains all the above mentioned steps:
-https://youtu.be/_mH2AjnAjDk
+<https://youtu.be/_mH2AjnAjDk>
+
+
+### Linux Development Environment Setup
+In addition to the steps above, ESP32 requires a dependency for a Python module, pyserial install using the cli.\
+```python3 -m pip install pyserial```
+
+If you're using Ubuntu , use apt to manage the dependencies of arduino:\
+pyserial install: ```sudo apt install python3-serial```
+
+Arduino AppImage must be set as executable after downloading to run correctly\
+example: ```chmod 775 arduino-ide_2.3.3_Linux_64bit.AppImage```
 
 ## Dependencies 📖
 This code uses the following excellent libraries: 

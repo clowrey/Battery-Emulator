@@ -11,6 +11,8 @@
 #include "hw_sjb_v1.h"
 #elif defined(HW_M5_ATOM)
 #include "hw_m5_atom.h"
+#elif defined(HW_3LB)
+#include "hw_3LB.h"
 #endif
 
 #endif
