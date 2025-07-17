@@ -28,7 +28,7 @@ USER_SECRETS.h
 
 # Ignore Cursor / Claude
 .cursor/
-.context/
+context/
 .claude/
 node_modules/
 

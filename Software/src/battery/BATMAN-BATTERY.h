@@ -13,7 +13,7 @@
 #endif
 
 // Batman IC SPI Configuration
-#define BMB_SPI_HOST    SPI2_HOST
+#define BMB_SPI_HOST    SPI3_HOST  // Use VSPI
 #define BMB_ENABLE      GPIO_NUM_19
 #define BMB_MISO        GPIO_NUM_5
 #define BMB_MOSI        GPIO_NUM_17
@@ -59,6 +59,7 @@ class BatmanBattery : public Battery {
   void batman_wake_up();
   void batman_idle_wake();
   void batman_get_data(uint8_t reg_id);
+  void batman_get_temp_data();
   void batman_write_config();
   void batman_take_snapshot();
   
