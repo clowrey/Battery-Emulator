@@ -1,12 +1,15 @@
 #ifndef _DATALAYER_H_
 #define _DATALAYER_H_
 
-#include "../include.h"
+#include "../../USER_SETTINGS.h"
+#include "../devboard/utils/types.h"
+#include "../system_settings.h"
 
 typedef struct {
   /** uint32_t */
   /** Total energy capacity in Watt-hours */
   uint32_t total_capacity_Wh = BATTERY_WH_MAX;
+  uint32_t reported_total_capacity_Wh = BATTERY_WH_MAX;
 
   /** uint16_t */
   /** The maximum intended packvoltage, in deciVolt. 4900 = 490.0 V */
@@ -45,6 +48,9 @@ typedef struct {
    */
   uint32_t reported_remaining_capacity_Wh;
 
+  int32_t total_charged_battery_Wh = 0;
+  int32_t total_discharged_battery_Wh = 0;
+
   /** Maximum allowed battery discharge power in Watts. Set by battery */
   uint32_t max_discharge_power_W = 0;
   /** Maximum allowed battery charge power in Watts. Set by battery */
@@ -75,6 +81,11 @@ typedef struct {
    * Use with battery.info.number_of_cells to get valid data.
    */
   uint16_t cell_voltages_mV[MAX_AMOUNT_CELLS];
+  /** All balancing resistors status inside the pack, either on(1) or off(0).
+   * Use with battery.info.number_of_cells to get valid data.
+   * Not available for all battery manufacturers.
+   */
+  bool cell_balancing_status[MAX_AMOUNT_CELLS];
   /** The "real" SOC reported from the battery, in integer-percent x 100. 9550 = 95.50% */
   uint16_t real_soc;
   /** The SOC reported to the inverter, in integer-percent x 100. 9550 = 95.50%.
@@ -86,14 +97,21 @@ typedef struct {
   uint16_t CAN_error_counter;
   /** uint8_t */
   /** A counter set each time a new message comes from battery.
-   * This value then gets decremented each 5 seconds. Incase we reach 0
+   * This value then gets decremented every second. Incase we reach 0
    * we report the battery as missing entirely on the CAN bus.
    */
   uint8_t CAN_battery_still_alive = CAN_STILL_ALIVE;
 
   /** Other */
-  /** The current BMS status */
+  /** The current system status, which for now still has the name bms_status */
   bms_status_enum bms_status = ACTIVE;
+
+  /** The current battery status, which for now has the name real_bms_status */
+  real_bms_status_enum real_bms_status = BMS_DISCONNECTED;
+
+  /** LED mode, customizable by user */
+  led_mode_enum led_mode = LED_MODE;
+
 } DATALAYER_BATTERY_STATUS_TYPE;
 
 typedef struct {
@@ -102,15 +120,51 @@ typedef struct {
   /** Minimum percentage setting. Set this value to the lowest real SOC
    * you want the inverter to be able to use. At this real SOC, the inverter
    * will "see" 0% */
-  uint16_t min_percentage = BATTERY_MINPERCENTAGE;
+  int16_t min_percentage = BATTERY_MINPERCENTAGE;
   /** Maximum percentage setting. Set this value to the highest real SOC
    * you want the inverter to be able to use. At this real SOC, the inverter
    * will "see" 100% */
   uint16_t max_percentage = BATTERY_MAXPERCENTAGE;
+
   /** The user specified maximum allowed charge rate, in deciAmpere. 300 = 30.0 A */
   uint16_t max_user_set_charge_dA = BATTERY_MAX_CHARGE_AMP;
   /** The user specified maximum allowed discharge rate, in deciAmpere. 300 = 30.0 A */
   uint16_t max_user_set_discharge_dA = BATTERY_MAX_DISCHARGE_AMP;
+
+  /** User specified discharge/charge voltages in use. Set to true to use user specified values */
+  /** Some inverters like to see a specific target voltage for charge/discharge. Use these values to override automatic voltage limits*/
+  bool user_set_voltage_limits_active = BATTERY_USE_VOLTAGE_LIMITS;
+  /** The user specified maximum allowed charge voltage, in deciVolt. 4000 = 400.0 V */
+  uint16_t max_user_set_charge_voltage_dV = BATTERY_MAX_CHARGE_VOLTAGE;
+  /** The user specified maximum allowed discharge voltage, in deciVolt. 3000 = 300.0 V */
+  uint16_t max_user_set_discharge_voltage_dV = BATTERY_MAX_DISCHARGE_VOLTAGE;
+
+  /** Parameters for keeping track of the limiting factor in the system */
+  bool user_settings_limit_discharge = false;
+  bool user_settings_limit_charge = false;
+  bool inverter_limits_discharge = false;
+  bool inverter_limits_charge = false;
+
+  /** Tesla specific settings that are edited on the fly when manually forcing a balance charge for LFP chemistry */
+  /* Bool for specifying if user has requested manual function */
+  bool user_requests_balancing = false;
+  bool user_requests_tesla_isolation_clear = false;
+  bool user_requests_tesla_bms_reset = false;
+  /* Forced balancing max time & start timestamp */
+  uint32_t balancing_time_ms = 3600000;  //1h default, (60min*60sec*1000ms)
+  uint32_t balancing_start_time_ms = 0;  //For keeping track when balancing started
+  /* Max cell voltage during forced balancing */
+  uint16_t balancing_max_cell_voltage_mV = 3650;
+  /* Max cell deviation allowed during forced balancing */
+  uint16_t balancing_max_deviation_cell_voltage_mV = 400;
+  /* Float max power during forced balancing */
+  uint16_t balancing_float_power_W = 1000;
+  /* Maximum voltage for entire battery pack during forced balancing */
+  uint16_t balancing_max_pack_voltage_dV = 3940;
+
+  /** Sofar CAN Battery ID (0-15) used to parallel multiple packs */
+  uint8_t sofar_user_specified_battery_id = 0;
+
 } DATALAYER_BATTERY_SETTINGS_TYPE;
 
 typedef struct {
@@ -120,25 +174,89 @@ typedef struct {
 } DATALAYER_BATTERY_TYPE;
 
 typedef struct {
+  /** Charger setpoint voltage */
+  float charger_setpoint_HV_VDC = 0;
+  /** Charger setpoint current */
+  float charger_setpoint_HV_IDC = 0;
+  /** Charger setpoint current at end of charge **/
+  float charger_setpoint_HV_IDC_END = 0;
+  /** Measured current from charger */
+  float charger_stat_HVcur = 0;
+  /** Measured HV from charger */
+  float charger_stat_HVvol = 0;
+  /** Measured AC current from charger **/
+  float charger_stat_ACcur = 0;
+  /** Measured AC voltage from charger **/
+  float charger_stat_ACvol = 0;
+  /** Measured LV current from charger **/
+  float charger_stat_LVcur = 0;
+  /** Measured LV voltage from charger **/
+  float charger_stat_LVvol = 0;
+  /** True if charger is enabled */
+  bool charger_HV_enabled = false;
+  /** True if the 12V DC/DC output is enabled */
+  bool charger_aux12V_enabled = false;
+  /** uint8_t */
+  /** A counter set each time a new message comes from charger.
+   * This value then gets decremented every second. Incase we reach 0
+   * we report the battery as missing entirely on the CAN bus.
+   */
+  uint8_t CAN_charger_still_alive = CAN_STILL_ALIVE;
+} DATALAYER_CHARGER_TYPE;
+
+typedef struct {
   /** measured voltage in deciVolts. 4200 = 420.0 V */
   uint16_t measured_voltage_dV = 0;
   /** measured amperage in deciAmperes. 300 = 30.0 A */
   uint16_t measured_amperage_dA = 0;
+  /** measured battery voltage in mV (S-BOX) **/
+  uint32_t measured_voltage_mV = 0;
+  /** measured output voltage in mV (eg. S-BOX) **/
+  uint32_t measured_outvoltage_mV = 0;
+  /** measured amperage in mA (eg. S-BOX) **/
+  int32_t measured_amperage_mA = 0;
+  /** Average current from last 1s **/
+  int32_t measured_avg1S_amperage_mA = 0;
+  /** True if contactors are precharging state */
+  bool precharging = false;
+  /** True if the contactor controlled by battery-emulator is closed */
+  bool contactors_engaged = false;
+  /** True if shunt communication ok **/
+  bool available = false;
 } DATALAYER_SHUNT_TYPE;
 
 typedef struct {
+  /** ESP32 main CPU temperature, for displaying on webserver and for safeties */
+  float CPU_temperature = 0;
   /** array with type of battery used, for displaying on webserver */
   char battery_protocol[64] = {0};
-  /** array with type of inverter used, for displaying on webserver */
+  /** array with type of inverter protocol used, for displaying on webserver */
   char inverter_protocol[64] = {0};
+  /** array with type of battery used, for displaying on webserver */
+  char shunt_protocol[64] = {0};
+  /** array with type of inverter brand used, for displaying on webserver */
+  char inverter_brand[8] = {0};
   /** array with incoming CAN messages, for displaying on webserver */
   char logged_can_messages[15000] = {0};
+  size_t logged_can_messages_offset = 0;
   /** bool, determines if CAN messages should be logged for webserver */
   bool can_logging_active = false;
+  /** uint8_t, enumeration which CAN interface should be used for log playback */
+  uint8_t can_replay_interface = CAN_NATIVE;
+  /** bool, determines if CAN replay should loop or not */
+  bool loop_playback = false;
+  /** bool, Native CAN failed to send flag */
+  bool can_native_send_fail = false;
+  /** bool, MCP2515 CAN failed to send flag */
+  bool can_2515_send_fail = false;
+  /** uint16_t, MCP2518 CANFD failed to send flag */
+  bool can_2518_send_fail = false;
 
 } DATALAYER_SYSTEM_INFO_TYPE;
 
 typedef struct {
+  /** Millis rollover count. Increments every 49.7 days. Used for keeping track on events */
+  uint8_t millisrolloverCount = 0;
 #ifdef FUNCTION_TIME_MEASUREMENT
   /** Core task measurement variable */
   int64_t core_task_max_us = 0;
@@ -148,8 +266,6 @@ typedef struct {
   int64_t mqtt_task_10s_max_us = 0;
   /** Wifi sub-task measurement variable, reset each 10 seconds */
   int64_t wifi_task_10s_max_us = 0;
-  /** loop() task measurement variable, reset each 10 seconds */
-  int64_t loop_task_10s_max_us = 0;
 
   /** OTA handling function measurement variable */
   int64_t time_ota_us = 0;
@@ -185,26 +301,36 @@ typedef struct {
 #endif
   /** uint8_t */
   /** A counter set each time a new message comes from inverter.
-   * This value then gets decremented each 5 seconds. Incase we reach 0
+   * This value then gets decremented every second. Incase we reach 0
    * we report the inverter as missing entirely on the CAN bus.
    */
   uint8_t CAN_inverter_still_alive = CAN_STILL_ALIVE;
-  /** True if the battery allows for the contactors to close */
+  /** True if the primary battery allows for the contactors to close */
   bool battery_allows_contactor_closing = false;
-  /** True if the second battery allows for the contactors to close */
-  bool battery2_allows_contactor_closing = false;
+
+  /** True if the second battery is allowed to close the contactors */
+  bool battery2_allowed_contactor_closing = false;
+
   /** True if the inverter allows for the contactors to close */
   bool inverter_allows_contactor_closing = true;
-#ifdef CONTACTOR_CONTROL
+
   /** True if the contactor controlled by battery-emulator is closed */
   bool contactors_engaged = false;
   /** True if the contactor controlled by battery-emulator is closed. Determined by check_interconnect_available(); if voltage is OK */
   bool contactors_battery2_engaged = false;
-#endif
+
+  /** True if the BMS is being reset, by cutting power towards it */
+  bool BMS_reset_in_progress = false;
+  /** True if the BMS is starting up */
+  bool BMS_startup_in_progress = false;
+
+  /** State of automatic precharge sequence */
+  PrechargeState precharge_status = AUTO_PRECHARGE_IDLE;
 } DATALAYER_SYSTEM_STATUS_TYPE;
 
 typedef struct {
   bool equipment_stop_active = false;
+  bool start_precharging = false;
 } DATALAYER_SYSTEM_SETTINGS_TYPE;
 
 typedef struct {
@@ -218,6 +344,7 @@ class DataLayer {
   DATALAYER_BATTERY_TYPE battery;
   DATALAYER_BATTERY_TYPE battery2;
   DATALAYER_SHUNT_TYPE shunt;
+  DATALAYER_CHARGER_TYPE charger;
   DATALAYER_SYSTEM_TYPE system;
 };
 

@@ -13,6 +13,8 @@
 #include "hw_m5_atom.h"
 #elif defined(HW_3LB)
 #include "hw_3LB.h"
+#elif defined(HW_DEVKIT)
+#include "hw_devkit.h"
 #endif
 
 #endif

@@ -2,17 +2,27 @@
 #define BYD_MODBUS_H
 #include "../include.h"
 
-#define MODBUS_INVERTER_SELECTED
+#ifdef BYD_MODBUS
+#define SELECTED_INVERTER_CLASS BydModbusInverter
+#endif
 
-#define MB_RTU_NUM_VALUES 13100
-#define MAX_POWER 40960  //BYD Modbus specific value
+#include "ModbusInverterProtocol.h"
 
-extern uint16_t mbPV[MB_RTU_NUM_VALUES];
+class BydModbusInverter : public ModbusInverterProtocol {
+ public:
+  void setup();
+  void update_values();
+  static constexpr const char* Name = "BYD 11kWh HVM battery over Modbus RTU";
 
-void handle_static_data_modbus_byd();
-void verify_temperature_modbus();
-void verify_inverter_modbus();
-void handle_update_data_modbusp201_byd();
-void handle_update_data_modbusp301_byd();
-void setup_inverter(void);
+ private:
+  void handle_static_data();
+  void verify_temperature();
+  void verify_inverter_modbus();
+  void handle_update_data_modbusp201_byd();
+  void handle_update_data_modbusp301_byd();
+
+  //BYD Modbus specific value
+  const uint16_t MAX_POWER = 40960;
+};
+
 #endif

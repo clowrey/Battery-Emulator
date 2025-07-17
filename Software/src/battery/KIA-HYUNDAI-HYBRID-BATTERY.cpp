@@ -1,59 +1,16 @@
-#include "../include.h"
-#ifdef KIA_HYUNDAI_HYBRID_BATTERY
+#include "KIA-HYUNDAI-HYBRID-BATTERY.h"
+#include "../communication/can/comm_can.h"
 #include "../datalayer/datalayer.h"
 #include "../devboard/utils/events.h"
-#include "KIA-HYUNDAI-HYBRID-BATTERY.h"
+#include "../include.h"
 
 /* TODO: 
 - The HEV battery seems to turn off after 1 minute of use. When this happens SOC% stops updating.
 - We need to figure out how to keep the BMS alive. Most likely we need to send a specific CAN message
 */
 
-/* Do not change code below unless you are sure what you are doing */
-static unsigned long previousMillis1000 = 0;  // will store last time a 100ms CAN Message was send
-
-static uint16_t SOC = 0;
-static uint16_t SOC_display = 0;
-static bool interlock_missing = false;
-static int16_t battery_current = 0;
-static uint8_t battery_current_high_byte = 0;
-static uint16_t battery_voltage = 0;
-static uint32_t available_charge_power = 0;
-static uint32_t available_discharge_power = 0;
-static int8_t battery_module_max_temperature = 0;
-static int8_t battery_module_min_temperature = 0;
-static uint8_t poll_data_pid = 0;
-static uint16_t cellvoltages_mv[98];
-static uint16_t min_cell_voltage_mv = 3700;
-static uint16_t max_cell_voltage_mv = 3700;
-
-CAN_frame KIA_7E4_id1 = {.FD = false,
-                         .ext_ID = false,
-                         .DLC = 8,
-                         .ID = 0x7E4,
-                         .data = {0x02, 0x21, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00}};
-CAN_frame KIA_7E4_id2 = {.FD = false,
-                         .ext_ID = false,
-                         .DLC = 8,
-                         .ID = 0x7E4,
-                         .data = {0x02, 0x21, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00}};
-CAN_frame KIA_7E4_id3 = {.FD = false,
-                         .ext_ID = false,
-                         .DLC = 8,
-                         .ID = 0x7E4,
-                         .data = {0x02, 0x21, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00}};
-CAN_frame KIA_7E4_id5 = {.FD = false,
-                         .ext_ID = false,
-                         .DLC = 8,
-                         .ID = 0x7E4,
-                         .data = {0x02, 0x21, 0x05, 0x04, 0x00, 0x00, 0x00, 0x00}};
-CAN_frame KIA_7E4_ack = {.FD = false,
-                         .ext_ID = false,
-                         .DLC = 8,
-                         .ID = 0x7E4,  //Ack frame, correct PID is returned. Flow control message
-                         .data = {0x30, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
-
-void update_values_battery() {  //This function maps all the values fetched via CAN to the correct parameters used for modbus
+void KiaHyundaiHybridBattery::
+    update_values() {  //This function maps all the values fetched via CAN to the correct parameters used for modbus
 
   datalayer.battery.status.real_soc = SOC * 50;
 
@@ -86,7 +43,7 @@ void update_values_battery() {  //This function maps all the values fetched via 
   }
 }
 
-void receive_can_battery(CAN_frame rx_frame) {
+void KiaHyundaiHybridBattery::handle_incoming_can_frame(CAN_frame rx_frame) {
   datalayer.battery.status.CAN_battery_still_alive = CAN_STILL_ALIVE;
   switch (rx_frame.ID) {
     case 0x5F1:
@@ -108,7 +65,7 @@ void receive_can_battery(CAN_frame rx_frame) {
       switch (rx_frame.data.u8[0]) {
         case 0x10:  //"PID Header"
           if (rx_frame.data.u8[3] == poll_data_pid) {
-            transmit_can(&KIA_7E4_ack, can_config.battery);  //Send ack to BMS if the same frame is sent as polled
+            transmit_can_frame(&KIA_7E4_ack, can_config.battery);  //Send ack to BMS if the same frame is sent as polled
           }
           break;
         case 0x21:                      //First frame in PID group
@@ -230,8 +187,8 @@ void receive_can_battery(CAN_frame rx_frame) {
       break;
   }
 }
-void send_can_battery() {
-  unsigned long currentMillis = millis();
+
+void KiaHyundaiHybridBattery::transmit_can(unsigned long currentMillis) {
 
   // Send 1000ms CAN Message
   if (currentMillis - previousMillis1000 >= INTERVAL_1_S) {
@@ -243,28 +200,26 @@ void send_can_battery() {
     }
     poll_data_pid++;
     if (poll_data_pid == 1) {
-      transmit_can(&KIA_7E4_id1, can_config.battery);
+      transmit_can_frame(&KIA_7E4_id1, can_config.battery);
     } else if (poll_data_pid == 2) {
-      transmit_can(&KIA_7E4_id2, can_config.battery);
+      transmit_can_frame(&KIA_7E4_id2, can_config.battery);
     } else if (poll_data_pid == 3) {
-      transmit_can(&KIA_7E4_id3, can_config.battery);
+      transmit_can_frame(&KIA_7E4_id3, can_config.battery);
     } else if (poll_data_pid == 4) {
 
     } else if (poll_data_pid == 5) {
-      transmit_can(&KIA_7E4_id5, can_config.battery);
+      transmit_can_frame(&KIA_7E4_id5, can_config.battery);
     }
   }
 }
 
-void setup_battery(void) {  // Performs one time setup at startup
-  strncpy(datalayer.system.info.battery_protocol, "Kia/Hyundai Hybrid", 63);
+void KiaHyundaiHybridBattery::setup(void) {  // Performs one time setup at startup
+  strncpy(datalayer.system.info.battery_protocol, Name, 63);
   datalayer.system.info.battery_protocol[63] = '\0';
-
+  datalayer.system.status.battery_allows_contactor_closing = true;
   datalayer.battery.info.number_of_cells = 56;  // HEV , TODO: Make dynamic according to HEV/PHEV
   datalayer.battery.info.max_design_voltage_dV = MAX_PACK_VOLTAGE_DV;
   datalayer.battery.info.min_design_voltage_dV = MIN_PACK_VOLTAGE_DV;
   datalayer.battery.info.max_cell_voltage_mV = MAX_CELL_VOLTAGE_MV;
   datalayer.battery.info.min_cell_voltage_mV = MIN_CELL_VOLTAGE_MV;
 }
-
-#endif

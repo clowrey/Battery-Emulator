@@ -5,61 +5,63 @@
 ![GitHub actions](https://img.shields.io/github/actions/workflow/status/dalathegreat/BYD-Battery-Emulator-For-Gen24/compile-all-batteries.yml?color=0E810E)
 ![Static Badge](https://img.shields.io/badge/made-with_love-blue?color=%23008000)
 
-This software enables EV battery packs to be used for stationary storage. It achieves this by converting the EV battery CAN data into a brand battery format that solar inverters can understand. This makes it extremely cheap and easy to use large EV batteries in a true plug'n'play fashion!
+## What is Battery Emulator?
+
+Many manufacturers sell home battery systems to enable homeowners to store power collected from the grid, or renewable sources, to use at times when electricity demand is higher. However almost all of these home battery systems charge a high cost for every kilowatt hour (kWh) of capacity you buy.
+
+At the same time, EV manufacturers have been putting high capacity battery packs into their cars, with no firm plan for what should happen to those batteries if the car is damaged in a crash, or reaches the end of its life as a vehicle.
+
+**Battery Emulator** enables EV battery packs to be repurposed for stationary storage. It acts as a translation layer between the EV battery and the home inverter. This makes it extremely cheap and easy to use large EV batteries in a true plug'n'play fashion!
 
 > [!CAUTION]
 > Working with high voltage is dangerous. Always follow local laws and regulations regarding high voltage work. If you are unsure about the rules in your country, consult a licensed electrician for more information.
 
-![Fronius](https://github.com/dalathegreat/Battery-Emulator/assets/26695010/741c3237-8074-4891-9cd1-f47f0fe45cb5)
 
-
-## Hardware requirements 📜
-This code fits on the LilyGo ESP32 T-CAN485 devboard , see https://github.com/Xinyuan-LilyGO/T-CAN485
-
-You will also need a complete EV battery. [See the battery compatibility list on which are supported.](https://github.com/dalathegreat/BYD-Battery-Emulator-For-Gen24/wiki#supported-batteries-list)
-
-Finally, you will need a [compatible hybrid solar inverter](https://github.com/dalathegreat/BYD-Battery-Emulator-For-Gen24/wiki#supported-inverters-list), for example the "Fronius Gen24" or "GoodWe ET"
+## Quickstart guide 📜
+- Pick a [supported inverter](https://github.com/dalathegreat/Battery-Emulator/wiki#supported-inverters-list) (solar panels optional) :sun_with_face: 
+- Pick a [supported battery](https://github.com/dalathegreat/Battery-Emulator/wiki#supported-batteries-list) :battery: 
+- Order the Battery-Emulator [compatible hardware](https://github.com/dalathegreat/Battery-Emulator/wiki#where-do-i-get-the-hardware-needed) :robot: 
+- Follow the [installation guidelines](https://github.com/dalathegreat/Battery-Emulator/wiki/Installation-guidelines) section for how to install and commission your battery properly :notebook: 
 
 ## Installation basics 🪛
-1. Connect one end of the LilyGo RS485 to the Gen24 Modbus
-2. Connect the other end of the LilyGo to the CAN side of the battery
-3. Wire up high voltage cable between the Gen24 and the battery
-4. Add a 5-12V power source to power the LilyGo and 12V to the battery (uninterruptible PSU or 12V lead acid recommended in parallel)
-5. Some batteries need manual pre-charge circuit and positive/negative contactor control. Others are automatic. See the wiki for more info.
+1. Connect your Battery Emulator hardware to your EV battery
+2. Connect your Battery Emulator hardware to your inverter
+3. Wire up high voltage cable between the inverter and the battery
+4. Add a low voltage power supply to your Battery Emulator hardware
+5. Configure any additional requirements to allow Battery Emulator to switch on your EV battery (also referred to as 'closing contactors')
 6. Enjoy a big cheap grid connected battery!
 
-## Wiring example, LEAF battery 💡
-Here's how to wire up the communication between the components.
-![Wiring](https://github.com/dalathegreat/Battery-Emulator/assets/26695010/29edeeda-1002-4826-9183-39a027b3b9ed)
-
-
-Here's how to connect the high voltage lines
-![HighVoltageWiring](https://github.com/dalathegreat/Battery-Emulator/assets/26695010/f70e6262-d630-4148-9a39-dad32e79b3d6)
-
-For more examples showing wiring, see each battery types own Wiki page. For instance the [Nissan LEAF page](https://github.com/dalathegreat/BYD-Battery-Emulator-For-Gen24/wiki/Nissan-LEAF-battery#wiring-diagram)
+For examples showing wiring, see each battery type's own Wiki page. For instance the [Nissan LEAF page](https://github.com/dalathegreat/Battery-Emulator/wiki/Battery:-Nissan-LEAF---e%E2%80%90NV200)
 
 ## How to compile the software 💻
+
+Start by watching this [quickstart guide](https://www.youtube.com/watch?v=hcl2GdHc0Y0)
+
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/hcl2GdHc0Y0/0.jpg)](https://www.youtube.com/watch?v=hcl2GdHc0Y0)
+
 1. Download the Arduino IDE: https://www.arduino.cc/en/software
 2. Open the Arduino IDE.
 3. Click `File` menu -> `Preferences` -> `Additional Development` -> `Additional Board Manager URLs` -> Enter the URL in the input box: `https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json` and click OK.
 4. Click `Tools` menu -> `Board: "...."` -> `Boards Manager...`, install the `esp32` package by `Espressif Systems` (not `Arduino ESP32 Boards`), then press `Close`.
 
-**NOTE: The version depends on which release of Battery-Emulator you are running!**
-
-- ⚠️ Make sure to use a 2.x.x version if you are on a release **older** than 6.0.0 (For instance ESP32 v2.0.11 when using Battery-Emulator v5.4.0)
-- ⚠️ Make sure to use a 3.x.x version if you are on a release **newer** than 6.0.0 (For instance ESP32 v3.0.0 when using Battery-Emulator v6.0.0)
-
+**NOTE: The ESP32 version depends on which release of Battery-Emulator you are running! See the [Release Notes](https://github.com/dalathegreat/Battery-Emulator/releases) for more info on which version to use with the current version (Suggested ESP32 version X.Y.Z)**
+  
 ![bild](https://github.com/dalathegreat/Battery-Emulator/assets/26695010/6a2414b1-f2ca-4746-8e8d-9afd78bd9252)
 
-5. The Arduino board should be set to `ESP32 Dev Module` (under `Tools` -> `Board` -> `ESP32 Arduino`) with the following settings:
-![alt text](https://github.com/Xinyuan-LilyGO/T-CAN485/blob/main/img/arduino_setting.png)
+5. The Arduino board should be set to `ESP32 Dev Module` and `Partition Scheme` to `Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS)` (under `Tools` -> `Board` -> `ESP32 Arduino`) with the following settings:
+
+![ArduinoSettings](https://github.com/user-attachments/assets/74d36b07-cca4-4bf1-9eaf-1e7fa4e1effe)
+
 6. Select which battery type you will use, along with other optional settings. This is done in the `USER_SETTINGS.h` file.
-7. Press `Verify` and `Upload` to send the sketch to the board.
+7. Copy the `USER_SECRETS.TEMPLATE.h` file to `USER_SECRETS.h` and update connectivity settings inside this file.
+8. Press `Verify` and `Upload` to send the sketch to the board.
 NOTE: In some cases, the LilyGo must be powered through the main power connector instead of USB-C
       when performing the initial firmware upload.
 NOTE: On Mac, the following USB driver may need to be installed: https://github.com/WCHSoftGroup/ch34xser_macos
 
 NOTE: If you see garbled messages on the serial console, change the serial console to match the baud rate to the code, currently 115200.
+
+NOTE: If you see the error `Sketch too big` then check you set the Partition Scheme above correctly.
 
 This video explains all the above mentioned steps:
 <https://youtu.be/_mH2AjnAjDk>
@@ -75,16 +77,17 @@ pyserial install: ```sudo apt install python3-serial```
 Arduino AppImage must be set as executable after downloading to run correctly\
 example: ```chmod 775 arduino-ide_2.3.3_Linux_64bit.AppImage```
 
+Also you might need to install FUSE to run appimages
+```sudo apt install libfuse2```
+
 ## Dependencies 📖
 This code uses the following excellent libraries: 
 - [adafruit/Adafruit_NeoPixel](https://github.com/adafruit/Adafruit_NeoPixel) LGPL-3.0 license
 - [ayushsharma82/ElegantOTA](https://github.com/ayushsharma82/ElegantOTA) AGPL-3.0 license 
 - [bblanchon/ArduinoJson](https://github.com/bblanchon/ArduinoJson) MIT-License
 - [eModbus/eModbus](https://github.com/eModbus/eModbus) MIT-License
-- [knolleary/pubsubclient](https://github.com/knolleary/pubsubclient) MIT-License
-- [mackelec/SerialDataLink](https://github.com/mackelec/SerialDataLink)
-- [me-no-dev/AsyncTCP](https://github.com/me-no-dev/AsyncTCP) LGPL-3.0 license
-- [me-no-dev/ESPAsyncWebServer](https://github.com/me-no-dev/ESPAsyncWebServer)
+- [ESP32Async/AsyncTCP](https://github.com/ESP32Async/AsyncTCP) LGPL-3.0 license
+- [ESP32Async/ESPAsyncWebServer](https://github.com/ESP32Async/ESPAsyncWebServer) LGPL-3.0 license
 - [miwagner/ESP32-Arduino-CAN](https://github.com/miwagner/ESP32-Arduino-CAN/) MIT-License
 - [pierremolinaro/acan2515](https://github.com/pierremolinaro/acan2515) MIT-License
 - [pierremolinaro/acan2517FD](https://github.com/pierremolinaro/acan2517FD) MIT-License
@@ -106,8 +109,11 @@ It is also based on the information found in the following excellent repositorie
 - Pylon hacking https://www.eevblog.com/forum/programming/pylontech-sc0500-protocol-hacking/
 
 ## Like this project? 💖
-Leave a ⭐ If you think this project is useful. Consider hopping onto my Patreon to encourage more open-source projects!
+Leave a ⭐ If you think this project is useful. Consider hopping onto my Patreon to encourage more open-source projects! As a bonus, you will get access to the Discord server, where we hangout, develop, support, share, discuss etc. all things related to DIY EV storage solutions. See you on the server? ;)
 
 <a href="https://www.patreon.com/dala">
 	<img src="https://c5.patreon.com/external/logo/become_a_patron_button@2x.png" width="160">
-</a>
+</a> <------ Click here to learn more!
+
+
+![image](https://github.com/user-attachments/assets/66b8e967-7f5e-409d-91ec-d012489a86d2)

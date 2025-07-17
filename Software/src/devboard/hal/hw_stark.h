@@ -38,7 +38,7 @@ GPIOs on extra header
 #define CAN_RX_PIN GPIO_NUM_26
 // #define CAN_SE_PIN 23 // (No function, GPIO 23 used instead as MCP_SCK)
 
-// CAN_FD defines
+// CANFD_ADDON defines
 #define MCP2517_SCK 17  // SCK input  of MCP2517
 #define MCP2517_SDI 5   // SDI input  of MCP2517
 #define MCP2517_SDO 34  // SDO output of MCP2517
@@ -50,9 +50,14 @@ GPIOs on extra header
 #define NEGATIVE_CONTACTOR_PIN 33
 #define PRECHARGE_PIN 25
 #define BMS_POWER 23
+#define SECOND_BATTERY_CONTACTORS_PIN 19  //Available as extra GPIO via pin header
+
+// Automatic precharging
+#define HIA4V1_PIN 19  //Available as extra GPIO via pin header
+#define INVERTER_DISCONNECT_CONTACTOR_PIN 25
 
 // SMA CAN contactor pins
-#define INVERTER_CONTACTOR_ENABLE_PIN 19
+#define INVERTER_CONTACTOR_ENABLE_PIN 2
 
 // LED
 #define LED_PIN 4
@@ -61,11 +66,24 @@ GPIOs on extra header
 // Equipment stop pin
 #define EQUIPMENT_STOP_PIN 2
 
+// BMW_I3_BATTERY wake up pin
+#define WUP_PIN1 GPIO_NUM_25  // Wake up pin for battery 1
+#define WUP_PIN2 GPIO_NUM_32  // Wake up pin for battery 2
+
 /* ----- Error checks below, don't change (can't be moved to separate file) ----- */
 #ifndef HW_CONFIGURED
 #define HW_CONFIGURED
 #else
 #error Multiple HW defined! Please select a single HW
-#endif
+#endif  // HW_CONFIGURED
 
+#ifdef BMW_I3_BATTERY
+#if defined(CONTACTOR_CONTROL) && defined(WUP_PIN1)
+#error GPIO PIN 25 cannot be used for both BMWi3 Wakeup and contactor control. Disable CONTACTOR_CONTROL
 #endif
+#if defined(CONTACTOR_CONTROL) && defined(WUP_PIN2)
+#error GPIO PIN 32 cannot be used for both BMWi3 Wakeup and contactor control. Disable CONTACTOR_CONTROL
+#endif
+#endif  // BMW_I3_BATTERY
+
+#endif  // __HW_STARK_H__

@@ -1,7 +1,8 @@
 #ifndef CHADEMO_SHUNTS_H
 #define CHADEMO_SHUNTS_H
 
-#include "../lib/miwagner-ESP32-Arduino-CAN/ESP32CAN.h"
+#include <stdint.h>
+#include "../devboard/utils/types.h"
 
 uint16_t get_measured_voltage();
 uint16_t get_measured_current();
@@ -25,6 +26,6 @@ void ISA_getCONFIG(uint8_t i);
 void ISA_getCAN_ID(uint8_t i);
 void ISA_getINFO(uint8_t i);
 
-void transmit_can(CAN_frame* tx_frame, int interface);
+void transmit_can_frame(CAN_frame* tx_frame, int interface);
 
 #endif

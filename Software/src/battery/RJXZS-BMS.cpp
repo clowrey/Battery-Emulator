@@ -1,81 +1,10 @@
-#include "../include.h"
-#ifdef RJXZS_BMS
+#include "RJXZS-BMS.h"
+#include "../communication/can/comm_can.h"
 #include "../datalayer/datalayer.h"
 #include "../devboard/utils/events.h"
-#include "RJXZS-BMS.h"
+#include "../include.h"
 
-/* Do not change code below unless you are sure what you are doing */
-static unsigned long previousMillis10s = 0;  // will store last time a 10s CAN Message was sent
-
-//Actual content messages
-CAN_frame RJXZS_1C = {.FD = false, .ext_ID = true, .DLC = 3, .ID = 0xF4, .data = {0x1C, 0x00, 0x02}};
-CAN_frame RJXZS_10 = {.FD = false, .ext_ID = true, .DLC = 3, .ID = 0xF4, .data = {0x10, 0x00, 0x02}};
-
-#define FIVE_MINUTES 60
-
-static uint8_t mux = 0;
-static bool setup_completed = false;
-static uint16_t total_voltage = 0;
-static int16_t total_current = 0;
-static uint16_t total_power = 0;
-static uint16_t battery_usage_capacity = 0;
-static uint16_t battery_capacity_percentage = 0;
-static uint16_t charging_capacity = 0;
-static uint16_t charging_recovery_voltage = 0;
-static uint16_t discharging_recovery_voltage = 0;
-static uint16_t remaining_capacity = 0;
-static int16_t host_temperature = 0;
-static uint16_t status_accounting = 0;
-static uint16_t equalization_starting_voltage = 0;
-static uint16_t discharge_protection_voltage = 0;
-static uint16_t protective_current = 0;
-static uint16_t battery_pack_capacity = 0;
-static uint16_t number_of_battery_strings = 0;
-static uint16_t charging_protection_voltage = 0;
-static int16_t protection_temperature = 0;
-static bool temperature_below_zero_mod1_4 = false;
-static bool temperature_below_zero_mod5_8 = false;
-static bool temperature_below_zero_mod9_12 = false;
-static bool temperature_below_zero_mod13_16 = false;
-static uint16_t module_1_temperature = 0;
-static uint16_t module_2_temperature = 0;
-static uint16_t module_3_temperature = 0;
-static uint16_t module_4_temperature = 0;
-static uint16_t module_5_temperature = 0;
-static uint16_t module_6_temperature = 0;
-static uint16_t module_7_temperature = 0;
-static uint16_t module_8_temperature = 0;
-static uint16_t module_9_temperature = 0;
-static uint16_t module_10_temperature = 0;
-static uint16_t module_11_temperature = 0;
-static uint16_t module_12_temperature = 0;
-static uint16_t module_13_temperature = 0;
-static uint16_t module_14_temperature = 0;
-static uint16_t module_15_temperature = 0;
-static uint16_t module_16_temperature = 0;
-static uint16_t low_voltage_power_outage_protection = 0;
-static uint16_t low_voltage_power_outage_delayed = 0;
-static uint16_t num_of_triggering_protection_cells = 0;
-static uint16_t balanced_reference_voltage = 0;
-static uint16_t minimum_cell_voltage = 0;
-static uint16_t maximum_cell_voltage = 0;
-static uint16_t cellvoltages[MAX_AMOUNT_CELLS];
-static uint8_t populated_cellvoltages = 0;
-static uint16_t accumulated_total_capacity_high = 0;
-static uint16_t accumulated_total_capacity_low = 0;
-static uint16_t pre_charge_delay_time = 0;
-static uint16_t LCD_status = 0;
-static uint16_t differential_pressure_setting_value = 0;
-static uint16_t use_capacity_to_automatically_reset = 0;
-static uint16_t low_temperature_protection_setting_value = 0;
-static uint16_t protecting_historical_logs = 0;
-static uint16_t hall_sensor_type = 0;
-static uint16_t fan_start_setting_value = 0;
-static uint16_t ptc_heating_start_setting_value = 0;
-static uint16_t default_channel_state = 0;
-static uint8_t timespent_without_soc = 0;
-
-void update_values_battery() {
+void RjxzsBms::update_values() {
 
   datalayer.battery.status.real_soc = battery_capacity_percentage * 100;
   if (battery_capacity_percentage == 0) {
@@ -96,7 +25,13 @@ void update_values_battery() {
 
   datalayer.battery.status.voltage_dV = total_voltage;
 
-  datalayer.battery.status.current_dA = total_current;
+  if (charging_active) {
+    datalayer.battery.status.current_dA = total_current;
+  } else if (discharging_active) {
+    datalayer.battery.status.current_dA = -total_current;
+  } else {  //No direction data. Should never occur, but send current as charging, better than nothing
+    datalayer.battery.status.current_dA = total_current;
+  }
 
   // Charge power is set in .h file
   if (datalayer.battery.status.real_soc > 9900) {
@@ -158,21 +93,21 @@ void update_values_battery() {
   datalayer.battery.status.cell_min_voltage_mV = minimum_cell_voltage;
 }
 
-void receive_can_battery(CAN_frame rx_frame) {
+void RjxzsBms::handle_incoming_can_frame(CAN_frame rx_frame) {
 
   /*
   // All CAN messages recieved will be logged via serial
-  Serial.print(millis());  // Example printout, time, ID, length, data: 7553  1DB  8  FF C0 B9 EA 0 0 2 5D
-  Serial.print("  ");
-  Serial.print(rx_frame.ID, HEX);
-  Serial.print("  ");
-  Serial.print(rx_frame.DLC);
-  Serial.print("  ");
+  logging.print(millis());  // Example printout, time, ID, length, data: 7553  1DB  8  FF C0 B9 EA 0 0 2 5D
+  logging.print("  ");
+  logging.print(rx_frame.ID, HEX);
+  logging.print("  ");
+  logging.print(rx_frame.DLC);
+  logging.print("  ");
   for (int i = 0; i < rx_frame.DLC; ++i) {
-    Serial.print(rx_frame.data.u8[i], HEX);
-    Serial.print(" ");
+    logging.print(rx_frame.data.u8[i], HEX);
+    logging.print(" ");
   }
-  Serial.println("");
+  logging.println("");
   */
   switch (rx_frame.ID) {
     case 0xF5:                 // This is the only message is sent from BMS
@@ -204,6 +139,13 @@ void receive_can_battery(CAN_frame rx_frame) {
         host_temperature = (rx_frame.data.u8[1] << 8) | rx_frame.data.u8[2];
         status_accounting = (rx_frame.data.u8[3] << 8) | rx_frame.data.u8[4];
         equalization_starting_voltage = (rx_frame.data.u8[5] << 8) | rx_frame.data.u8[6];
+        if ((rx_frame.data.u8[4] & 0x40) >> 6) {
+          charging_active = true;
+          discharging_active = false;
+        } else {
+          charging_active = false;
+          discharging_active = true;
+        }
       } else if (mux == 0x07) {  // Cellvoltages 1-3
         cellvoltages[0] = (rx_frame.data.u8[1] << 8) | rx_frame.data.u8[2];
         cellvoltages[1] = (rx_frame.data.u8[3] << 8) | rx_frame.data.u8[4];
@@ -507,6 +449,12 @@ void receive_can_battery(CAN_frame rx_frame) {
         low_temperature_protection_setting_value = (rx_frame.data.u8[5] << 8) | rx_frame.data.u8[6];
         protecting_historical_logs = rx_frame.data.u8[7];
 
+        if ((protecting_historical_logs & 0x0F) > 0) {
+          set_event(EVENT_RJXZS_LOG, 0);
+        } else {
+          clear_event(EVENT_RJXZS_LOG);
+        }
+
         if (protecting_historical_logs == 0x01) {
           // Overcurrent protection
           set_event(EVENT_DISCHARGE_LIMIT_EXCEEDED, 0);  // could also be EVENT_CHARGE_LIMIT_EXCEEDED
@@ -550,11 +498,9 @@ void receive_can_battery(CAN_frame rx_frame) {
   }
 }
 
-void send_can_battery() {
-  unsigned long currentMillis = millis();
+void RjxzsBms::transmit_can(unsigned long currentMillis) {
   // Send 10s CAN Message
   if (currentMillis - previousMillis10s >= INTERVAL_10_S) {
-
     previousMillis10s = currentMillis;
 
     if (datalayer.battery.status.bms_status == FAULT) {
@@ -563,19 +509,18 @@ void send_can_battery() {
     }
 
     if (!setup_completed) {
-      transmit_can(&RJXZS_10, can_config.battery);  // Communication connected flag
-      transmit_can(&RJXZS_1C, can_config.battery);  // CAN OK
+      transmit_can_frame(&RJXZS_10, can_config.battery);  // Communication connected flag
+      transmit_can_frame(&RJXZS_1C, can_config.battery);  // CAN OK
     }
   }
 }
 
-void setup_battery(void) {  // Performs one time setup at startup
-  strncpy(datalayer.system.info.battery_protocol, "RJXZS BMS, DIY battery", 63);
+void RjxzsBms::setup(void) {  // Performs one time setup at startup
+  strncpy(datalayer.system.info.battery_protocol, Name, 63);
   datalayer.system.info.battery_protocol[63] = '\0';
   datalayer.battery.info.max_design_voltage_dV = MAX_PACK_VOLTAGE_DV;
   datalayer.battery.info.min_design_voltage_dV = MIN_PACK_VOLTAGE_DV;
   datalayer.battery.info.max_cell_voltage_mV = MAX_CELL_VOLTAGE_MV;
   datalayer.battery.info.min_cell_voltage_mV = MIN_CELL_VOLTAGE_MV;
+  datalayer.system.status.battery_allows_contactor_closing = true;
 }
-
-#endif  // RJXZS_BMS

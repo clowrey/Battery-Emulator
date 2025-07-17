@@ -1,13 +1,9 @@
-#include "../include.h"
-#ifdef KIA_E_GMP_BATTERY
+#include "KIA-E-GMP-BATTERY.h"
+#include "../communication/can/comm_can.h"
 #include "../datalayer/datalayer.h"
 #include "../devboard/utils/events.h"
+#include "../include.h"
 #include "../lib/pierremolinaro-ACAN2517FD/ACAN2517FD.h"
-#include "KIA-E-GMP-BATTERY.h"
-
-/* Do not change code below unless you are sure what you are doing */
-static unsigned long previousMillis200ms = 0;  // will store last time a 200ms CAN Message was send
-static unsigned long previousMillis10s = 0;    // will store last time a 10s CAN Message was send
 
 const unsigned char crc8_table[256] =
     {  // CRC8_SAE_J1850_ZER0 formula,0x1D Poly,initial value 0x3F,Final XOR value varies
@@ -27,42 +23,105 @@ const unsigned char crc8_table[256] =
         0x60, 0x7D, 0x2E, 0x33, 0x14, 0x09, 0x7F, 0x62, 0x45, 0x58, 0x0B, 0x16, 0x31, 0x2C, 0x97, 0x8A, 0xAD, 0xB0,
         0xE3, 0xFE, 0xD9, 0xC4};
 
-static uint16_t inverterVoltageFrameHigh = 0;
-static uint16_t inverterVoltage = 0;
-static uint16_t soc_calculated = 0;
-static uint16_t SOC_BMS = 0;
-static uint16_t SOC_Display = 0;
-static uint16_t batterySOH = 1000;
-static uint16_t CellVoltMax_mV = 3700;
-static uint16_t CellVoltMin_mV = 3700;
-static uint16_t batteryVoltage = 6700;
-static int16_t leadAcidBatteryVoltage = 120;
-static int16_t batteryAmps = 0;
-static int16_t temperatureMax = 0;
-static int16_t temperatureMin = 0;
-static int16_t allowedDischargePower = 0;
-static int16_t allowedChargePower = 0;
-static int16_t poll_data_pid = 0;
-static uint8_t CellVmaxNo = 0;
-static uint8_t CellVminNo = 0;
-static uint8_t batteryManagementMode = 0;
-static uint8_t BMS_ign = 0;
-static uint8_t batteryRelay = 0;
-static uint8_t waterleakageSensor = 164;
-static bool startedUp = false;
-static bool ok_start_polling_battery = false;
-static uint8_t counter_200 = 0;
-static uint8_t KIA_7E4_COUNTER = 0x01;
-static int8_t temperature_water_inlet = 0;
-static int8_t powerRelayTemperature = 0;
-static int8_t heatertemp = 0;
-static bool set_voltage_limits = false;
-static uint8_t ticks_200ms_counter = 0;
-static uint8_t EGMP_1CF_counter = 0;
-static uint8_t EGMP_3XF_counter = 0;
+// Define the data points for %SOC depending on cell voltage
+const uint8_t numPoints = 100;
+
+const uint16_t SOC[] = {10000, 9900, 9800, 9700, 9600, 9500, 9400, 9300, 9200, 9100, 9000, 8900, 8800, 8700, 8600,
+                        8500,  8400, 8300, 8200, 8100, 8000, 7900, 7800, 7700, 7600, 7500, 7400, 7300, 7200, 7100,
+                        7000,  6900, 6800, 6700, 6600, 6500, 6400, 6300, 6200, 6100, 6000, 5900, 5800, 5700, 5600,
+                        5500,  5400, 5300, 5200, 5100, 5000, 4900, 4800, 4700, 4600, 4500, 4400, 4300, 4200, 4100,
+                        4000,  3900, 3800, 3700, 3600, 3500, 3400, 3300, 3200, 3100, 3000, 2900, 2800, 2700, 2600,
+                        2500,  2400, 2300, 2200, 2100, 2000, 1900, 1800, 1700, 1600, 1500, 1400, 1300, 1200, 1100,
+                        1000,  900,  800,  700,  600,  500,  400,  300,  200,  100,  0};
+
+const uint16_t voltage[] = {4200, 4173, 4148, 4124, 4102, 4080, 4060, 4041, 4023, 4007, 3993, 3980, 3969, 3959, 3953,
+                            3950, 3941, 3932, 3924, 3915, 3907, 3898, 3890, 3881, 3872, 3864, 3855, 3847, 3838, 3830,
+                            3821, 3812, 3804, 3795, 3787, 3778, 3770, 3761, 3752, 3744, 3735, 3727, 3718, 3710, 3701,
+                            3692, 3684, 3675, 3667, 3658, 3650, 3641, 3632, 3624, 3615, 3607, 3598, 3590, 3581, 3572,
+                            3564, 3555, 3547, 3538, 3530, 3521, 3512, 3504, 3495, 3487, 3478, 3470, 3461, 3452, 3444,
+                            3435, 3427, 3418, 3410, 3401, 3392, 3384, 3375, 3367, 3358, 3350, 3338, 3325, 3313, 3299,
+                            3285, 3271, 3255, 3239, 3221, 3202, 3180, 3156, 3127, 3090, 3000};
+
+// Function to estimate SOC based on cell voltage
+uint16_t estimateSOCFromCell(uint16_t cellVoltage) {
+  if (cellVoltage >= voltage[0]) {
+    return SOC[0];
+  }
+  if (cellVoltage <= voltage[numPoints - 1]) {
+    return SOC[numPoints - 1];
+  }
+
+  for (int i = 1; i < numPoints; ++i) {
+    if (cellVoltage >= voltage[i]) {
+      // Cast to float for proper division
+      float t = (float)(cellVoltage - voltage[i]) / (float)(voltage[i - 1] - voltage[i]);
+
+      // Calculate interpolated SOC value
+      uint16_t socDiff = SOC[i - 1] - SOC[i];
+      uint16_t interpolatedValue = SOC[i] + (uint16_t)(t * socDiff);
+
+      return interpolatedValue;
+    }
+  }
+  return 0;  // Default return for safety, should never reach here
+}
+
+// Simplified version of the pack-based SOC estimation with compensation
+uint16_t KiaEGmpBattery::estimateSOC(uint16_t packVoltage, uint16_t cellCount, int16_t currentAmps) {
+  // If cell count is still the default 192 but we haven't confirmed it yet
+  if (!set_voltage_limits && cellCount == 192) {
+    // Fall back to BMS-reported SOC while cell count is uncertain
+    return (SOC_Display * 10);
+  }
+
+  if (cellCount == 0)
+    return 0;
+
+  // Convert pack voltage (decivolts) to millivolts
+  uint32_t packVoltageMv = packVoltage * 100;
+
+  // Apply internal resistance compensation
+  // Current is in deciamps (-150 = -15.0A, 150 = 15.0A)
+  // Resistance is in milliohms
+  int32_t voltageDrop = (currentAmps * PACK_INTERNAL_RESISTANCE_MOHM) / 10;
+
+  // Compensate the pack voltage (add the voltage drop)
+  uint32_t compensatedPackVoltageMv = packVoltageMv + voltageDrop;
+
+  // Calculate average cell voltage in millivolts
+  uint16_t avgCellVoltage = compensatedPackVoltageMv / cellCount;
+
+#ifdef DEBUG_LOG
+  logging.print("Pack: ");
+  logging.print(packVoltage / 10.0);
+  logging.print("V, Current: ");
+  logging.print(currentAmps / 10.0);
+  logging.print("A, Drop: ");
+  logging.print(voltageDrop / 1000.0);
+  logging.print("V, Comp Pack: ");
+  logging.print(compensatedPackVoltageMv / 1000.0);
+  logging.print("V, Avg Cell: ");
+  logging.print(avgCellVoltage);
+  logging.println("mV");
+#endif
+
+  // Use the cell voltage lookup table to estimate SOC
+  return estimateSOCFromCell(avgCellVoltage);
+}
+
+// Fix: Change parameter types to uint16_t to match SOC values
+uint16_t selectSOC(uint16_t SOC_low, uint16_t SOC_high) {
+  if (SOC_low == 0 || SOC_high == 0) {
+    return 0;  // If either value is 0, return 0
+  }
+  if (SOC_low == 10000 || SOC_high == 10000) {
+    return 10000;  // If either value is 100%, return 100%
+  }
+  return (SOC_low < SOC_high) ? SOC_low : SOC_high;  // Otherwise, return the lowest value
+}
 
 /* These messages are needed for contactor closing */
-unsigned long startMillis;
+unsigned long startMillis = 0;
 uint8_t messageIndex = 0;
 uint8_t messageDelays[63] = {0,   0,   5,   10,  10,  15,  19,  19,  20,  20,  25,  30,  30,  35,  40,  40,
                              45,  49,  49,  50,  50,  52,  53,  53,  54,  55,  60,  60,  65,  67,  67,  70,
@@ -596,7 +655,7 @@ void set_cell_voltages(CAN_frame rx_frame, int start, int length, int startCell)
   }
 }
 
-void set_voltage_minmax_limits() {
+void KiaEGmpBattery::set_voltage_minmax_limits() {
 
   uint8_t valid_cell_count = 0;
   for (int i = 0; i < MAX_AMOUNT_CELLS; ++i) {
@@ -630,9 +689,19 @@ static uint8_t calculateCRC(CAN_frame rx_frame, uint8_t length, uint8_t initial_
   return crc;
 }
 
-void update_values_battery() {  //This function maps all the values fetched via CAN to the correct parameters used for modbus
+void KiaEGmpBattery::
+    update_values() {  //This function maps all the values fetched via CAN to the correct parameters used for modbus
 
+#ifdef ESTIMATE_SOC_FROM_CELLVOLTAGE
+  // Use the simplified pack-based SOC estimation with proper compensation
+  datalayer.battery.status.real_soc = estimateSOC(batteryVoltage, datalayer.battery.info.number_of_cells, batteryAmps);
+
+  // For comparison or fallback, we can still calculate from min/max cell voltages
+  SOC_estimated_lowest = estimateSOCFromCell(CellVoltMin_mV);
+  SOC_estimated_highest = estimateSOCFromCell(CellVoltMax_mV);
+#else
   datalayer.battery.status.real_soc = (SOC_Display * 10);  //increase SOC range from 0-100.0 -> 100.00
+#endif
 
   datalayer.battery.status.soh_pptt = (batterySOH * 10);  //Increase decimals from 100.0% -> 100.00%
 
@@ -672,14 +741,6 @@ void update_values_battery() {  //This function maps all the values fetched via 
     set_voltage_minmax_limits();  // Count cells, and set voltage limits accordingly
   }
 
-  /* Check if the BMS is still sending CAN messages. If we go 60s without messages we raise an error*/
-  if (!datalayer.battery.status.CAN_battery_still_alive) {
-    set_event(EVENT_CANFD_RX_FAILURE, 0);
-  } else {
-    datalayer.battery.status.CAN_battery_still_alive--;
-    clear_event(EVENT_CANFD_RX_FAILURE);
-  }
-
   if (waterleakageSensor == 0) {
     set_event(EVENT_WATER_INGRESS, 0);
   }
@@ -690,67 +751,67 @@ void update_values_battery() {  //This function maps all the values fetched via 
 
   /* Safeties verified. Perform USB serial printout if configured to do so */
 
-#ifdef DEBUG_VIA_USB
-  Serial.println();  //sepatator
-  Serial.println("Values from battery: ");
-  Serial.print("SOC BMS: ");
-  Serial.print((uint16_t)SOC_BMS / 10.0, 1);
-  Serial.print("%  |  SOC Display: ");
-  Serial.print((uint16_t)SOC_Display / 10.0, 1);
-  Serial.print("%  |  SOH ");
-  Serial.print((uint16_t)batterySOH / 10.0, 1);
-  Serial.println("%");
-  Serial.print((int16_t)batteryAmps / 10.0, 1);
-  Serial.print(" Amps  |  ");
-  Serial.print((uint16_t)batteryVoltage / 10.0, 1);
-  Serial.print(" Volts  |  ");
-  Serial.print((int16_t)datalayer.battery.status.active_power_W);
-  Serial.println(" Watts");
-  Serial.print("Allowed Charge ");
-  Serial.print((uint16_t)allowedChargePower * 10);
-  Serial.print(" W  |  Allowed Discharge ");
-  Serial.print((uint16_t)allowedDischargePower * 10);
-  Serial.println(" W");
-  Serial.print("MaxCellVolt ");
-  Serial.print(CellVoltMax_mV);
-  Serial.print(" mV  No  ");
-  Serial.print(CellVmaxNo);
-  Serial.print("  |  MinCellVolt ");
-  Serial.print(CellVoltMin_mV);
-  Serial.print(" mV  No  ");
-  Serial.println(CellVminNo);
-  Serial.print("TempHi ");
-  Serial.print((int16_t)temperatureMax);
-  Serial.print("°C  TempLo ");
-  Serial.print((int16_t)temperatureMin);
-  Serial.print("°C  WaterInlet ");
-  Serial.print((int8_t)temperature_water_inlet);
-  Serial.print("°C  PowerRelay ");
-  Serial.print((int8_t)powerRelayTemperature * 2);
-  Serial.println("°C");
-  Serial.print("Aux12volt: ");
-  Serial.print((int16_t)leadAcidBatteryVoltage / 10.0, 1);
-  Serial.println("V  |  ");
-  Serial.print("BmsManagementMode ");
-  Serial.print((uint8_t)batteryManagementMode, BIN);
+#ifdef DEBUG_LOG
+  logging.println();  //sepatator
+  logging.println("Values from battery: ");
+  logging.print("SOC BMS: ");
+  logging.print((uint16_t)SOC_BMS / 10.0, 1);
+  logging.print("%  |  SOC Display: ");
+  logging.print((uint16_t)SOC_Display / 10.0, 1);
+  logging.print("%  |  SOH ");
+  logging.print((uint16_t)batterySOH / 10.0, 1);
+  logging.println("%");
+  logging.print((int16_t)batteryAmps / 10.0, 1);
+  logging.print(" Amps  |  ");
+  logging.print((uint16_t)batteryVoltage / 10.0, 1);
+  logging.print(" Volts  |  ");
+  logging.print((int16_t)datalayer.battery.status.active_power_W);
+  logging.println(" Watts");
+  logging.print("Allowed Charge ");
+  logging.print((uint16_t)allowedChargePower * 10);
+  logging.print(" W  |  Allowed Discharge ");
+  logging.print((uint16_t)allowedDischargePower * 10);
+  logging.println(" W");
+  logging.print("MaxCellVolt ");
+  logging.print(CellVoltMax_mV);
+  logging.print(" mV  No  ");
+  logging.print(CellVmaxNo);
+  logging.print("  |  MinCellVolt ");
+  logging.print(CellVoltMin_mV);
+  logging.print(" mV  No  ");
+  logging.println(CellVminNo);
+  logging.print("TempHi ");
+  logging.print((int16_t)temperatureMax);
+  logging.print("°C  TempLo ");
+  logging.print((int16_t)temperatureMin);
+  logging.print("°C  WaterInlet ");
+  logging.print((int8_t)temperature_water_inlet);
+  logging.print("°C  PowerRelay ");
+  logging.print((int8_t)powerRelayTemperature * 2);
+  logging.println("°C");
+  logging.print("Aux12volt: ");
+  logging.print((int16_t)leadAcidBatteryVoltage / 10.0, 1);
+  logging.println("V  |  ");
+  logging.print("BmsManagementMode ");
+  logging.print((uint8_t)batteryManagementMode, BIN);
   if (bitRead((uint8_t)BMS_ign, 2) == 1) {
-    Serial.print("  |  BmsIgnition ON");
+    logging.print("  |  BmsIgnition ON");
   } else {
-    Serial.print("  |  BmsIgnition OFF");
+    logging.print("  |  BmsIgnition OFF");
   }
 
   if (bitRead((uint8_t)batteryRelay, 0) == 1) {
-    Serial.print("  |  PowerRelay ON");
+    logging.print("  |  PowerRelay ON");
   } else {
-    Serial.print("  |  PowerRelay OFF");
+    logging.print("  |  PowerRelay OFF");
   }
-  Serial.print("  |  Inverter ");
-  Serial.print(inverterVoltage);
-  Serial.println(" Volts");
+  logging.print("  |  Inverter ");
+  logging.print(inverterVoltage);
+  logging.println(" Volts");
 #endif
 }
 
-void receive_can_battery(CAN_frame rx_frame) {
+void KiaEGmpBattery::handle_incoming_can_frame(CAN_frame rx_frame) {
   startedUp = true;
   switch (rx_frame.ID) {
     case 0x055:
@@ -808,10 +869,10 @@ void receive_can_battery(CAN_frame rx_frame) {
       // print_canfd_frame(frame);
       switch (rx_frame.data.u8[0]) {
         case 0x10:  //"PID Header"
-          // Serial.println ("Send ack");
+          // logging.println ("Send ack");
           poll_data_pid = rx_frame.data.u8[4];
           // if (rx_frame.data.u8[4] == poll_data_pid) {
-          transmit_can(&EGMP_7E4_ack, can_config.battery);  //Send ack to BMS if the same frame is sent as polled
+          transmit_can_frame(&EGMP_7E4_ack, can_config.battery);  //Send ack to BMS if the same frame is sent as polled
           // }
           break;
         case 0x21:  //First frame in PID group
@@ -982,8 +1043,7 @@ void receive_can_battery(CAN_frame rx_frame) {
   }
 }
 
-void send_can_battery() {
-  unsigned long currentMillis = millis();
+void KiaEGmpBattery::transmit_can(unsigned long currentMillis) {
   if (startedUp) {
     //Send Contactor closing message loop
     // Check if we still have messages to send
@@ -993,7 +1053,7 @@ void send_can_battery() {
       if (currentMillis - startMillis >= messageDelays[messageIndex]) {
 
         // Transmit the current message
-        transmit_can(messages[messageIndex], can_config.battery);
+        transmit_can_frame(messages[messageIndex], can_config.battery);
 
         // Move to the next message
         messageIndex++;
@@ -1001,25 +1061,18 @@ void send_can_battery() {
     }
 
     if (messageIndex >= 63) {
-      startMillis = millis();  // Start over!
+      startMillis = currentMillis;  // Start over!
       messageIndex = 0;
     }
 
     //Send 200ms CANFD message
     if (currentMillis - previousMillis200ms >= INTERVAL_200_MS) {
       previousMillis200ms = currentMillis;
-      // Check if sending of CAN messages has been delayed too much.
-      if ((currentMillis - previousMillis200ms >= INTERVAL_200_MS_DELAYED) && (currentMillis > BOOTUP_TIME)) {
-        set_event(EVENT_CAN_OVERRUN, (currentMillis - previousMillis200ms));
-      } else {
-        clear_event(EVENT_CAN_OVERRUN);
-      }
-      previousMillis200ms = currentMillis;
 
       EGMP_7E4.data.u8[3] = KIA_7E4_COUNTER;
 
       if (ok_start_polling_battery) {
-        transmit_can(&EGMP_7E4, can_config.battery);
+        transmit_can_frame(&EGMP_7E4, can_config.battery);
       }
 
       KIA_7E4_COUNTER++;
@@ -1036,12 +1089,9 @@ void send_can_battery() {
   }
 }
 
-void setup_battery(void) {  // Performs one time setup at startup
-  strncpy(datalayer.system.info.battery_protocol, "Kia/Hyundai EGMP platform", 63);
+void KiaEGmpBattery::setup(void) {  // Performs one time setup at startup
+  strncpy(datalayer.system.info.battery_protocol, Name, 63);
   datalayer.system.info.battery_protocol[63] = '\0';
-
-  startMillis = millis();  // Record the starting time
-
   datalayer.system.status.battery_allows_contactor_closing = true;
   datalayer.battery.info.number_of_cells = 192;  // TODO: will vary depending on battery
   datalayer.battery.info.max_design_voltage_dV = MAX_PACK_VOLTAGE_DV;
@@ -1050,5 +1100,3 @@ void setup_battery(void) {  // Performs one time setup at startup
   datalayer.battery.info.min_cell_voltage_mV = MIN_CELL_VOLTAGE_MV;
   datalayer.battery.info.max_cell_voltage_deviation_mV = MAX_CELL_DEVIATION_MV;
 }
-
-#endif

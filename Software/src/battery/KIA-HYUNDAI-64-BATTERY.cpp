@@ -1,136 +1,35 @@
-#include "../include.h"
-#ifdef KIA_HYUNDAI_64_BATTERY
-#include "../datalayer/datalayer.h"
-#include "../devboard/utils/events.h"
 #include "KIA-HYUNDAI-64-BATTERY.h"
+#include "../communication/can/comm_can.h"
+#include "../datalayer/datalayer.h"
+#include "../datalayer/datalayer_extended.h"
+#include "../devboard/utils/events.h"
+#include "../include.h"
 
-/* Do not change code below unless you are sure what you are doing */
-static unsigned long previousMillis100 = 0;  // will store last time a 100ms CAN Message was send
-static unsigned long previousMillis10 = 0;   // will store last time a 10s CAN Message was send
+void KiaHyundai64Battery::
+    update_values() {  //This function maps all the values fetched via CAN to the correct parameters used for modbus
 
-static uint16_t soc_calculated = 0;
-static uint16_t SOC_BMS = 0;
-static uint16_t SOC_Display = 0;
-static uint16_t batterySOH = 1000;
-static uint16_t CellVoltMax_mV = 3700;
-static uint16_t CellVoltMin_mV = 3700;
-static uint16_t allowedDischargePower = 0;
-static uint16_t allowedChargePower = 0;
-static uint16_t batteryVoltage = 0;
-static uint16_t inverterVoltageFrameHigh = 0;
-static uint16_t inverterVoltage = 0;
-static uint16_t cellvoltages_mv[98];
-static int16_t leadAcidBatteryVoltage = 120;
-static int16_t batteryAmps = 0;
-static int16_t temperatureMax = 0;
-static int16_t temperatureMin = 0;
-static int16_t poll_data_pid = 0;
-static uint8_t CellVmaxNo = 0;
-static uint8_t CellVminNo = 0;
-static uint8_t batteryManagementMode = 0;
-static uint8_t BMS_ign = 0;
-static uint8_t batteryRelay = 0;
-static uint8_t waterleakageSensor = 164;
-static uint8_t counter_200 = 0;
-static int8_t temperature_water_inlet = 0;
-static int8_t heatertemp = 0;
-static int8_t powerRelayTemperature = 0;
-static bool startedUp = false;
+  datalayer_battery->status.real_soc = (SOC_Display * 10);  //increase SOC range from 0-100.0 -> 100.00
 
-CAN_frame KIA_HYUNDAI_200 = {.FD = false,
-                             .ext_ID = false,
-                             .DLC = 8,
-                             .ID = 0x200,
-                             .data = {0x00, 0x80, 0xD8, 0x04, 0x00, 0x17, 0xD0, 0x00}};  //Mid log value
-CAN_frame KIA_HYUNDAI_523 = {.FD = false,
-                             .ext_ID = false,
-                             .DLC = 8,
-                             .ID = 0x523,
-                             .data = {0x08, 0x38, 0x36, 0x36, 0x33, 0x34, 0x00, 0x01}};  //Mid log value
-CAN_frame KIA_HYUNDAI_524 = {.FD = false,
-                             .ext_ID = false,
-                             .DLC = 8,
-                             .ID = 0x524,
-                             .data = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};  //Initial value
-//553 Needed frame 200ms
-CAN_frame KIA64_553 = {.FD = false,
-                       .ext_ID = false,
-                       .DLC = 8,
-                       .ID = 0x553,
-                       .data = {0x04, 0x00, 0x80, 0x00, 0x00, 0x00, 0x80, 0x00}};
-//57F Needed frame 100ms
-CAN_frame KIA64_57F = {.FD = false,
-                       .ext_ID = false,
-                       .DLC = 8,
-                       .ID = 0x57F,
-                       .data = {0x80, 0x0A, 0x72, 0x00, 0x00, 0x00, 0x00, 0x72}};
-//Needed frame 100ms
-CAN_frame KIA64_2A1 = {.FD = false,
-                       .ext_ID = false,
-                       .DLC = 8,
-                       .ID = 0x2A1,
-                       .data = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
-CAN_frame KIA64_7E4_id1 = {.FD = false,
-                           .ext_ID = false,
-                           .DLC = 8,
-                           .ID = 0x7E4,
-                           .data = {0x03, 0x22, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00}};  //Poll PID 03 22 01 01
-CAN_frame KIA64_7E4_id2 = {.FD = false,
-                           .ext_ID = false,
-                           .DLC = 8,
-                           .ID = 0x7E4,
-                           .data = {0x03, 0x22, 0x01, 0x02, 0x00, 0x00, 0x00, 0x00}};  //Poll PID 03 22 01 02
-CAN_frame KIA64_7E4_id3 = {.FD = false,
-                           .ext_ID = false,
-                           .DLC = 8,
-                           .ID = 0x7E4,
-                           .data = {0x03, 0x22, 0x01, 0x03, 0x00, 0x00, 0x00, 0x00}};  //Poll PID 03 22 01 03
-CAN_frame KIA64_7E4_id4 = {.FD = false,
-                           .ext_ID = false,
-                           .DLC = 8,
-                           .ID = 0x7E4,
-                           .data = {0x03, 0x22, 0x01, 0x04, 0x00, 0x00, 0x00, 0x00}};  //Poll PID 03 22 01 04
-CAN_frame KIA64_7E4_id5 = {.FD = false,
-                           .ext_ID = false,
-                           .DLC = 8,
-                           .ID = 0x7E4,
-                           .data = {0x03, 0x22, 0x01, 0x05, 0x00, 0x00, 0x00, 0x00}};  //Poll PID 03 22 01 05
-CAN_frame KIA64_7E4_id6 = {.FD = false,
-                           .ext_ID = false,
-                           .DLC = 8,
-                           .ID = 0x7E4,
-                           .data = {0x03, 0x22, 0x01, 0x06, 0x00, 0x00, 0x00, 0x00}};  //Poll PID 03 22 01 06
-CAN_frame KIA64_7E4_ack = {
-    .FD = false,
-    .ext_ID = false,
-    .DLC = 8,
-    .ID = 0x7E4,
-    .data = {0x30, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};  //Ack frame, correct PID is returned
+  datalayer_battery->status.soh_pptt = (batterySOH * 10);  //Increase decimals from 100.0% -> 100.00%
 
-void update_values_battery() {  //This function maps all the values fetched via CAN to the correct parameters used for modbus
+  datalayer_battery->status.voltage_dV = batteryVoltage;  //value is *10 (3700 = 370.0)
 
-  datalayer.battery.status.real_soc = (SOC_Display * 10);  //increase SOC range from 0-100.0 -> 100.00
+  datalayer_battery->status.current_dA = -batteryAmps;  //value is *10 (150 = 15.0) , invert the sign
 
-  datalayer.battery.status.soh_pptt = (batterySOH * 10);  //Increase decimals from 100.0% -> 100.00%
+  datalayer_battery->status.remaining_capacity_Wh = static_cast<uint32_t>(
+      (static_cast<double>(datalayer_battery->status.real_soc) / 10000) * datalayer_battery->info.total_capacity_Wh);
 
-  datalayer.battery.status.voltage_dV = batteryVoltage;  //value is *10 (3700 = 370.0)
+  datalayer_battery->status.max_charge_power_W = allowedChargePower * 10;
 
-  datalayer.battery.status.current_dA = -batteryAmps;  //value is *10 (150 = 15.0) , invert the sign
+  datalayer_battery->status.max_discharge_power_W = allowedDischargePower * 10;
 
-  datalayer.battery.status.remaining_capacity_Wh = static_cast<uint32_t>(
-      (static_cast<double>(datalayer.battery.status.real_soc) / 10000) * datalayer.battery.info.total_capacity_Wh);
+  datalayer_battery->status.temperature_min_dC = (int8_t)temperatureMin * 10;  //Increase decimals, 17C -> 17.0C
 
-  datalayer.battery.status.max_charge_power_W = allowedChargePower * 10;
+  datalayer_battery->status.temperature_max_dC = (int8_t)temperatureMax * 10;  //Increase decimals, 18C -> 18.0C
 
-  datalayer.battery.status.max_discharge_power_W = allowedDischargePower * 10;
+  datalayer_battery->status.cell_max_voltage_mV = CellVoltMax_mV;
 
-  datalayer.battery.status.temperature_min_dC = (int8_t)temperatureMin * 10;  //Increase decimals, 17C -> 17.0C
-
-  datalayer.battery.status.temperature_max_dC = (int8_t)temperatureMax * 10;  //Increase decimals, 18C -> 18.0C
-
-  datalayer.battery.status.cell_max_voltage_mV = CellVoltMax_mV;
-
-  datalayer.battery.status.cell_min_voltage_mV = CellVoltMin_mV;
+  datalayer_battery->status.cell_min_voltage_mV = CellVoltMin_mV;
 
   if (waterleakageSensor == 0) {
     set_event(EVENT_WATER_INGRESS, 0);
@@ -140,94 +39,101 @@ void update_values_battery() {  //This function maps all the values fetched via 
     set_event(EVENT_12V_LOW, leadAcidBatteryVoltage);
   }
 
-  /* Safeties verified. Perform USB serial printout if configured to do so */
+  // Update webserver datalayer
+  datalayer_battery_extended->total_cell_count = datalayer_battery->info.number_of_cells;
+  datalayer_battery_extended->battery_12V = leadAcidBatteryVoltage;
+  datalayer_battery_extended->waterleakageSensor = waterleakageSensor;
+  datalayer_battery_extended->temperature_water_inlet = temperature_water_inlet;
+  datalayer_battery_extended->powerRelayTemperature = powerRelayTemperature * 2;
+  datalayer_battery_extended->batteryManagementMode = batteryManagementMode;
+  datalayer_battery_extended->BMS_ign = BMS_ign;
+  datalayer_battery_extended->batteryRelay = batteryRelay;
 
-#ifdef DEBUG_VIA_USB
-  Serial.println();  //sepatator
-  Serial.println("Values from battery: ");
-  Serial.print("SOC BMS: ");
-  Serial.print((uint16_t)SOC_BMS / 10.0, 1);
-  Serial.print("%  |  SOC Display: ");
-  Serial.print((uint16_t)SOC_Display / 10.0, 1);
-  Serial.print("%  |  SOH ");
-  Serial.print((uint16_t)batterySOH / 10.0, 1);
-  Serial.println("%");
-  Serial.print((int16_t)batteryAmps / 10.0, 1);
-  Serial.print(" Amps  |  ");
-  Serial.print((uint16_t)batteryVoltage / 10.0, 1);
-  Serial.print(" Volts  |  ");
-  Serial.print((int16_t)datalayer.battery.status.active_power_W);
-  Serial.println(" Watts");
-  Serial.print("Allowed Charge ");
-  Serial.print((uint16_t)allowedChargePower * 10);
-  Serial.print(" W  |  Allowed Discharge ");
-  Serial.print((uint16_t)allowedDischargePower * 10);
-  Serial.println(" W");
-  Serial.print("MaxCellVolt ");
-  Serial.print(CellVoltMax_mV);
-  Serial.print(" mV  No  ");
-  Serial.print(CellVmaxNo);
-  Serial.print("  |  MinCellVolt ");
-  Serial.print(CellVoltMin_mV);
-  Serial.print(" mV  No  ");
-  Serial.println(CellVminNo);
-  Serial.print("TempHi ");
-  Serial.print((int16_t)temperatureMax);
-  Serial.print("°C  TempLo ");
-  Serial.print((int16_t)temperatureMin);
-  Serial.print("°C  WaterInlet ");
-  Serial.print((int8_t)temperature_water_inlet);
-  Serial.print("°C  PowerRelay ");
-  Serial.print((int8_t)powerRelayTemperature * 2);
-  Serial.println("°C");
-  Serial.print("Aux12volt: ");
-  Serial.print((int16_t)leadAcidBatteryVoltage / 10.0, 1);
-  Serial.println("V  |  ");
-  Serial.print("BmsManagementMode ");
-  Serial.print((uint8_t)batteryManagementMode, BIN);
+  //Perform logging if configured to do so
+#ifdef DEBUG_LOG
+  logging.println();  //sepatator
+  logging.println("Values from battery: ");
+  logging.print("SOC BMS: ");
+  logging.print((uint16_t)SOC_BMS / 10.0, 1);
+  logging.print("%  |  SOC Display: ");
+  logging.print((uint16_t)SOC_Display / 10.0, 1);
+  logging.print("%  |  SOH ");
+  logging.print((uint16_t)batterySOH / 10.0, 1);
+  logging.println("%");
+  logging.print((int16_t)batteryAmps / 10.0, 1);
+  logging.print(" Amps  |  ");
+  logging.print((uint16_t)batteryVoltage / 10.0, 1);
+  logging.print(" Volts  |  ");
+  logging.print((int16_t)datalayer_battery->status.active_power_W);
+  logging.println(" Watts");
+  logging.print("Allowed Charge ");
+  logging.print((uint16_t)allowedChargePower * 10);
+  logging.print(" W  |  Allowed Discharge ");
+  logging.print((uint16_t)allowedDischargePower * 10);
+  logging.println(" W");
+  logging.print("MaxCellVolt ");
+  logging.print(CellVoltMax_mV);
+  logging.print(" mV  No  ");
+  logging.print(CellVmaxNo);
+  logging.print("  |  MinCellVolt ");
+  logging.print(CellVoltMin_mV);
+  logging.print(" mV  No  ");
+  logging.println(CellVminNo);
+  logging.print("TempHi ");
+  logging.print((int16_t)temperatureMax);
+  logging.print("°C  TempLo ");
+  logging.print((int16_t)temperatureMin);
+  logging.print("°C  WaterInlet ");
+  logging.print((int8_t)temperature_water_inlet);
+  logging.print("°C  PowerRelay ");
+  logging.print((int8_t)powerRelayTemperature * 2);
+  logging.println("°C");
+  logging.print("Aux12volt: ");
+  logging.print((int16_t)leadAcidBatteryVoltage / 10.0, 1);
+  logging.println("V  |  ");
+  logging.print("BmsManagementMode ");
+  logging.print((uint8_t)batteryManagementMode, BIN);
   if (bitRead((uint8_t)BMS_ign, 2) == 1) {
-    Serial.print("  |  BmsIgnition ON");
+    logging.print("  |  BmsIgnition ON");
   } else {
-    Serial.print("  |  BmsIgnition OFF");
+    logging.print("  |  BmsIgnition OFF");
   }
 
   if (bitRead((uint8_t)batteryRelay, 0) == 1) {
-    Serial.print("  |  PowerRelay ON");
+    logging.print("  |  PowerRelay ON");
   } else {
-    Serial.print("  |  PowerRelay OFF");
+    logging.print("  |  PowerRelay OFF");
   }
-  Serial.print("  |  Inverter ");
-  Serial.print(inverterVoltage);
-  Serial.println(" Volts");
+  logging.print("  |  Inverter ");
+  logging.print(inverterVoltage);
+  logging.println(" Volts");
 #endif
 }
 
-void update_number_of_cells() {
-  //If we have cell values and number_of_cells not initialized yet
-  if (cellvoltages_mv[0] > 0 && datalayer.battery.info.number_of_cells == 0) {
-    // Check if we have 98S or 90S battery
-    if (datalayer.battery.status.cell_voltages_mV[97] > 0) {
-      datalayer.battery.info.number_of_cells = 98;
-      datalayer.battery.info.max_design_voltage_dV = MAX_PACK_VOLTAGE_98S_DV;
-      datalayer.battery.info.min_design_voltage_dV = MIN_PACK_VOLTAGE_98S_DV;
-      datalayer.battery.info.total_capacity_Wh = 64000;
-    } else {
-      datalayer.battery.info.number_of_cells = 90;
-      datalayer.battery.info.max_design_voltage_dV = MAX_PACK_VOLTAGE_90S_DV;
-      datalayer.battery.info.min_design_voltage_dV = MIN_PACK_VOLTAGE_90S_DV;
-      datalayer.battery.info.total_capacity_Wh = 40000;
-    }
+void KiaHyundai64Battery::update_number_of_cells() {
+  // Check if we have 98S or 90S battery. If the 98th cell is valid range, we are on a 98S battery
+  if ((datalayer_battery->status.cell_voltages_mV[97] > 2000) &&
+      (datalayer_battery->status.cell_voltages_mV[97] < 4500)) {
+    datalayer_battery->info.number_of_cells = 98;
+    datalayer_battery->info.max_design_voltage_dV = MAX_PACK_VOLTAGE_98S_DV;
+    datalayer_battery->info.min_design_voltage_dV = MIN_PACK_VOLTAGE_98S_DV;
+    datalayer_battery->info.total_capacity_Wh = 64000;
+  } else {
+    datalayer_battery->info.number_of_cells = 90;
+    datalayer_battery->info.max_design_voltage_dV = MAX_PACK_VOLTAGE_90S_DV;
+    datalayer_battery->info.min_design_voltage_dV = MIN_PACK_VOLTAGE_90S_DV;
+    datalayer_battery->info.total_capacity_Wh = 40000;
   }
 }
 
-void receive_can_battery(CAN_frame rx_frame) {
+void KiaHyundai64Battery::handle_incoming_can_frame(CAN_frame rx_frame) {
   switch (rx_frame.ID) {
     case 0x4DE:
       startedUp = true;
       break;
     case 0x542:  //BMS SOC
       startedUp = true;
-      datalayer.battery.status.CAN_battery_still_alive = CAN_STILL_ALIVE;
+      datalayer_battery->status.CAN_battery_still_alive = CAN_STILL_ALIVE;
       SOC_Display = rx_frame.data.u8[0] * 5;  //100% = 200 ( 200 * 5 = 1000 )
       break;
     case 0x594:
@@ -262,34 +168,36 @@ void receive_can_battery(CAN_frame rx_frame) {
     case 0x5D8:
       startedUp = true;
 
-      //PID data is polled after last message sent from battery:
-      if (poll_data_pid >= 10) {  //polling one of ten PIDs at 100ms, resolution = 1s
-        poll_data_pid = 0;
-      }
-      poll_data_pid++;
-      if (poll_data_pid == 1) {
-        transmit_can(&KIA64_7E4_id1, can_config.battery);
-      } else if (poll_data_pid == 2) {
-        transmit_can(&KIA64_7E4_id2, can_config.battery);
-      } else if (poll_data_pid == 3) {
-        transmit_can(&KIA64_7E4_id3, can_config.battery);
-      } else if (poll_data_pid == 4) {
-        transmit_can(&KIA64_7E4_id4, can_config.battery);
-      } else if (poll_data_pid == 5) {
-        transmit_can(&KIA64_7E4_id5, can_config.battery);
-      } else if (poll_data_pid == 6) {
-        transmit_can(&KIA64_7E4_id6, can_config.battery);
-      } else if (poll_data_pid == 7) {
-      } else if (poll_data_pid == 8) {
-      } else if (poll_data_pid == 9) {
-      } else if (poll_data_pid == 10) {
+      //PID data is polled after last message sent from battery every other time:
+      if (holdPidCounter == true) {
+        holdPidCounter = false;
+      } else {
+        holdPidCounter = true;
+        if (poll_data_pid >= 6) {  //polling one of six PIDs at 100ms*2, resolution = 1200ms
+          poll_data_pid = 0;
+        }
+        poll_data_pid++;
+        if (poll_data_pid == 1) {
+          transmit_can_frame(&KIA64_7E4_id1, can_interface);
+        } else if (poll_data_pid == 2) {
+          transmit_can_frame(&KIA64_7E4_id2, can_interface);
+        } else if (poll_data_pid == 3) {
+          transmit_can_frame(&KIA64_7E4_id3, can_interface);
+        } else if (poll_data_pid == 4) {
+          transmit_can_frame(&KIA64_7E4_id4, can_interface);
+        } else if (poll_data_pid == 5) {
+          transmit_can_frame(&KIA64_7E4_id5, can_interface);
+        } else if (poll_data_pid == 6) {
+          transmit_can_frame(&KIA64_7E4_id6, can_interface);
+        }
       }
       break;
     case 0x7EC:  //Data From polled PID group, BigEndian
       switch (rx_frame.data.u8[0]) {
         case 0x10:  //"PID Header"
           if (rx_frame.data.u8[4] == poll_data_pid) {
-            transmit_can(&KIA64_7E4_ack, can_config.battery);  //Send ack to BMS if the same frame is sent as polled
+            transmit_can_frame(&KIA64_7E4_ack,
+                               can_interface);  //Send ack to BMS if the same frame is sent as polled
           }
           break;
         case 0x21:  //First frame in PID group
@@ -407,7 +315,9 @@ void receive_can_battery(CAN_frame rx_frame) {
             cellvoltages_mv[87] = (rx_frame.data.u8[4] * 20);
             cellvoltages_mv[88] = (rx_frame.data.u8[5] * 20);
             cellvoltages_mv[89] = (rx_frame.data.u8[6] * 20);
-            cellvoltages_mv[90] = (rx_frame.data.u8[7] * 20);
+            if (rx_frame.data.u8[7] > 4) {                       // Data only valid on 98S
+              cellvoltages_mv[90] = (rx_frame.data.u8[7] * 20);  // Perform extra checks
+            }
           } else if (poll_data_pid == 5) {
             batterySOH = ((rx_frame.data.u8[2] << 8) + rx_frame.data.u8[3]);
           }
@@ -425,22 +335,44 @@ void receive_can_battery(CAN_frame rx_frame) {
             cellvoltages_mv[61] = (rx_frame.data.u8[3] * 20);
             cellvoltages_mv[62] = (rx_frame.data.u8[4] * 20);
             cellvoltages_mv[63] = (rx_frame.data.u8[5] * 20);
-          } else if (poll_data_pid == 4) {
-            cellvoltages_mv[91] = (rx_frame.data.u8[1] * 20);
-            cellvoltages_mv[92] = (rx_frame.data.u8[2] * 20);
-            cellvoltages_mv[93] = (rx_frame.data.u8[3] * 20);
-            cellvoltages_mv[94] = (rx_frame.data.u8[4] * 20);
-            cellvoltages_mv[95] = (rx_frame.data.u8[5] * 20);
-          } else if (poll_data_pid == 5) {
-            cellvoltages_mv[96] = (rx_frame.data.u8[4] * 20);
-            cellvoltages_mv[97] = (rx_frame.data.u8[5] * 20);
+          } else if (poll_data_pid == 4) {  // Data only valid on 98S
+            if (rx_frame.data.u8[1] > 4) {  // Perform extra checks
+              cellvoltages_mv[91] = (rx_frame.data.u8[1] * 20);
+            }
+            if (rx_frame.data.u8[2] > 4) {  // Perform extra checks
+              cellvoltages_mv[92] = (rx_frame.data.u8[2] * 20);
+            }
+            if (rx_frame.data.u8[3] > 4) {  // Perform extra checks
+              cellvoltages_mv[93] = (rx_frame.data.u8[3] * 20);
+            }
+            if (rx_frame.data.u8[4] > 4) {  // Perform extra checks
+              cellvoltages_mv[94] = (rx_frame.data.u8[4] * 20);
+            }
+            if (rx_frame.data.u8[5] > 4) {  // Perform extra checks
+              cellvoltages_mv[95] = (rx_frame.data.u8[5] * 20);
+            }
+          } else if (poll_data_pid == 5) {  // Data only valid on 98S
+            if (rx_frame.data.u8[4] > 4) {  // Perform extra checks
+              cellvoltages_mv[96] = (rx_frame.data.u8[4] * 20);
+            }
+            if (rx_frame.data.u8[5] > 4) {  // Perform extra checks
+              cellvoltages_mv[97] = (rx_frame.data.u8[5] * 20);
+            }
           }
           break;
         case 0x26:  //Sixth datarow in PID group
-          //Map all cell voltages to the global array
-          memcpy(datalayer.battery.status.cell_voltages_mV, cellvoltages_mv, 98 * sizeof(uint16_t));
-          //Update number of cells
-          update_number_of_cells();
+          if (poll_data_pid == 5) {
+            //We have read all cells, check that content is valid:
+            for (uint8_t i = 85; i < 97; ++i) {
+              if (cellvoltages_mv[i] < 300) {  // Zero the value if it's below 300
+                cellvoltages_mv[i] = 0;        // Some packs incorrectly report the last unpopulated cells as 20-60mV
+              }
+            }
+            //Map all cell voltages to the global array
+            memcpy(datalayer_battery->status.cell_voltages_mV, cellvoltages_mv, 98 * sizeof(uint16_t));
+            //Update number of cells
+            update_number_of_cells();
+          }
           break;
         case 0x27:  //Seventh datarow in PID group
           if (poll_data_pid == 1) {
@@ -460,8 +392,7 @@ void receive_can_battery(CAN_frame rx_frame) {
   }
 }
 
-void send_can_battery() {
-  unsigned long currentMillis = millis();
+void KiaHyundai64Battery::transmit_can(unsigned long currentMillis) {
 
   if (!startedUp) {
     return;  // Don't send any CAN messages towards battery until it has started up
@@ -471,75 +402,75 @@ void send_can_battery() {
   if (currentMillis - previousMillis100 >= INTERVAL_100_MS) {
     previousMillis100 = currentMillis;
 
-    transmit_can(&KIA64_553, can_config.battery);
-    transmit_can(&KIA64_57F, can_config.battery);
-    transmit_can(&KIA64_2A1, can_config.battery);
+    if (contactor_closing_allowed == nullptr || *contactor_closing_allowed) {
+      transmit_can_frame(&KIA64_553, can_interface);
+      transmit_can_frame(&KIA64_57F, can_interface);
+      transmit_can_frame(&KIA64_2A1, can_interface);
+    }
   }
+
   // Send 10ms CAN Message
   if (currentMillis - previousMillis10 >= INTERVAL_10_MS) {
-    // Check if sending of CAN messages has been delayed too much.
-    if ((currentMillis - previousMillis10 >= INTERVAL_10_MS_DELAYED) && (currentMillis > BOOTUP_TIME)) {
-      set_event(EVENT_CAN_OVERRUN, (currentMillis - previousMillis10));
-    } else {
-      clear_event(EVENT_CAN_OVERRUN);
-    }
     previousMillis10 = currentMillis;
 
-    switch (counter_200) {
-      case 0:
-        KIA_HYUNDAI_200.data.u8[5] = 0x17;
-        ++counter_200;
-        break;
-      case 1:
-        KIA_HYUNDAI_200.data.u8[5] = 0x57;
-        ++counter_200;
-        break;
-      case 2:
-        KIA_HYUNDAI_200.data.u8[5] = 0x97;
-        ++counter_200;
-        break;
-      case 3:
-        KIA_HYUNDAI_200.data.u8[5] = 0xD7;
-        ++counter_200;
-        break;
-      case 4:
-        KIA_HYUNDAI_200.data.u8[3] = 0x10;
-        KIA_HYUNDAI_200.data.u8[5] = 0xFF;
-        ++counter_200;
-        break;
-      case 5:
-        KIA_HYUNDAI_200.data.u8[5] = 0x3B;
-        ++counter_200;
-        break;
-      case 6:
-        KIA_HYUNDAI_200.data.u8[5] = 0x7B;
-        ++counter_200;
-        break;
-      case 7:
-        KIA_HYUNDAI_200.data.u8[5] = 0xBB;
-        ++counter_200;
-        break;
-      case 8:
-        KIA_HYUNDAI_200.data.u8[5] = 0xFB;
-        counter_200 = 5;
-        break;
+    if (contactor_closing_allowed == nullptr || *contactor_closing_allowed) {
+
+      switch (counter_200) {
+        case 0:
+          KIA_HYUNDAI_200.data.u8[5] = 0x17;
+          ++counter_200;
+          break;
+        case 1:
+          KIA_HYUNDAI_200.data.u8[5] = 0x57;
+          ++counter_200;
+          break;
+        case 2:
+          KIA_HYUNDAI_200.data.u8[5] = 0x97;
+          ++counter_200;
+          break;
+        case 3:
+          KIA_HYUNDAI_200.data.u8[5] = 0xD7;
+          ++counter_200;
+          break;
+        case 4:
+          KIA_HYUNDAI_200.data.u8[3] = 0x10;
+          KIA_HYUNDAI_200.data.u8[5] = 0xFF;
+          ++counter_200;
+          break;
+        case 5:
+          KIA_HYUNDAI_200.data.u8[5] = 0x3B;
+          ++counter_200;
+          break;
+        case 6:
+          KIA_HYUNDAI_200.data.u8[5] = 0x7B;
+          ++counter_200;
+          break;
+        case 7:
+          KIA_HYUNDAI_200.data.u8[5] = 0xBB;
+          ++counter_200;
+          break;
+        case 8:
+          KIA_HYUNDAI_200.data.u8[5] = 0xFB;
+          counter_200 = 5;
+          break;
+      }
+
+      transmit_can_frame(&KIA_HYUNDAI_200, can_interface);
+      transmit_can_frame(&KIA_HYUNDAI_523, can_interface);
+      transmit_can_frame(&KIA_HYUNDAI_524, can_interface);
     }
-
-    transmit_can(&KIA_HYUNDAI_200, can_config.battery);
-
-    transmit_can(&KIA_HYUNDAI_523, can_config.battery);
-
-    transmit_can(&KIA_HYUNDAI_524, can_config.battery);
   }
 }
 
-void setup_battery(void) {  // Performs one time setup at startup
-  strncpy(datalayer.system.info.battery_protocol, "Kia/Hyundai 64/40kWh battery", 63);
+void KiaHyundai64Battery::setup(void) {  // Performs one time setup at startup
+  strncpy(datalayer.system.info.battery_protocol, Name, 63);
   datalayer.system.info.battery_protocol[63] = '\0';
-  datalayer.battery.info.max_design_voltage_dV = MAX_PACK_VOLTAGE_98S_DV;  //Start with 98S value. Precised later
-  datalayer.battery.info.min_design_voltage_dV = MIN_PACK_VOLTAGE_90S_DV;  //Start with 90S value. Precised later
-  datalayer.battery.info.max_cell_voltage_mV = MAX_CELL_VOLTAGE_MV;
-  datalayer.battery.info.min_cell_voltage_mV = MIN_CELL_VOLTAGE_MV;
+  datalayer_battery->info.max_design_voltage_dV = MAX_PACK_VOLTAGE_98S_DV;  //Start with 98S value. Precised later
+  datalayer_battery->info.min_design_voltage_dV = MIN_PACK_VOLTAGE_90S_DV;  //Start with 90S value. Precised later
+  datalayer_battery->info.max_cell_voltage_mV = MAX_CELL_VOLTAGE_MV;
+  datalayer_battery->info.min_cell_voltage_mV = MIN_CELL_VOLTAGE_MV;
+  datalayer_battery->info.max_cell_voltage_deviation_mV = MAX_CELL_DEVIATION_MV;
+  if (allows_contactor_closing) {
+    *allows_contactor_closing = true;
+  }
 }
-
-#endif

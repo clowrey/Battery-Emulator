@@ -4,11 +4,10 @@
 #include <Preferences.h>
 #include <WiFi.h>
 #include "../../include.h"
+#include "../../lib/ESP32Async-ESPAsyncWebServer/src/ESPAsyncWebServer.h"
 #include "../../lib/YiannisBourkelis-Uptime-Library/src/uptime_formatter.h"
 #include "../../lib/ayushsharma82-ElegantOTA/src/ElegantOTA.h"
-#include "../../lib/me-no-dev-AsyncTCP/src/AsyncTCP.h"
-#include "../../lib/me-no-dev-ESPAsyncWebServer/src/ESPAsyncWebServer.h"
-#include "../../lib/miwagner-ESP32-Arduino-CAN/ESP32CAN.h"
+#include "../../lib/mathieucarbou-AsyncTCPSock/src/AsyncTCP.h"
 
 extern const char* version_number;  // The current software version, shown on webserver
 
@@ -104,7 +103,10 @@ void onOTAEnd(bool success);
 template <typename T>
 String formatPowerValue(String label, T value, String unit, int precision, String color = "white");
 
-extern void storeSettings();
+template <typename T>  // This function makes power values appear as W when under 1000, and kW when over
+String formatPowerValue(T value, String unit, int precision);
+
+extern void store_settings();
 
 void ota_monitor();
 

@@ -1,8 +1,8 @@
-#include "../include.h"
-#ifdef SANTA_FE_PHEV_BATTERY
+#include "SANTA-FE-PHEV-BATTERY.h"
+#include "../communication/can/comm_can.h"
 #include "../datalayer/datalayer.h"
 #include "../devboard/utils/events.h"
-#include "SANTA-FE-PHEV-BATTERY.h"
+#include "../include.h"
 
 /* Credits go to maciek16c for these findings!
 https://github.com/maciek16c/hyundai-santa-fe-phev-battery
@@ -13,99 +13,58 @@ TODO: Tweak temperature values once more data is known about them
 TODO: Check if CRC function works like it should. This enables checking for corrupt messages
 */
 
-/* Do not change code below unless you are sure what you are doing */
-static unsigned long previousMillis10 = 0;   // will store last time a 10ms CAN Message was send
-static unsigned long previousMillis100 = 0;  // will store last time a 100ms CAN Message was send
-static unsigned long previousMillis500 = 0;  // will store last time a 500ms CAN Message was send
-static uint8_t poll_data_pid = 0;
+static uint8_t CalculateCRC8(CAN_frame rx_frame) {
+  int crc = 0;
 
-static uint16_t SOC_Display = 0;
-static uint16_t batterySOH = 100;
-static uint16_t CellVoltMax_mV = 3700;
-static uint16_t CellVoltMin_mV = 3700;
-static uint8_t CellVmaxNo = 0;
-static uint8_t CellVminNo = 0;
-static uint16_t allowedDischargePower = 0;
-static uint16_t allowedChargePower = 0;
-static uint16_t batteryVoltage = 0;
-static int16_t leadAcidBatteryVoltage = 120;
-static int8_t temperatureMax = 0;
-static int8_t temperatureMin = 0;
-static int16_t batteryAmps = 0;
-static uint8_t counter_200 = 0;
-static uint8_t checksum_200 = 0;
-static uint8_t StatusBattery = 0;
-static uint16_t cellvoltages_mv[96];
+  for (uint8_t framepos = 0; framepos < 8; framepos++) {
+    crc ^= rx_frame.data.u8[framepos];
 
-CAN_frame SANTAFE_200 = {.FD = false,
-                         .ext_ID = false,
-                         .DLC = 8,
-                         .ID = 0x200,
-                         .data = {0x00, 0x00, 0x00, 0x00, 0x80, 0x10, 0x00, 0x00}};
-CAN_frame SANTAFE_2A1 = {.FD = false,
-                         .ext_ID = false,
-                         .DLC = 8,
-                         .ID = 0x2A1,
-                         .data = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x02}};
-CAN_frame SANTAFE_2F0 = {.FD = false,
-                         .ext_ID = false,
-                         .DLC = 8,
-                         .ID = 0x2F0,
-                         .data = {0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0x00}};
-CAN_frame SANTAFE_523 = {.FD = false,
-                         .ext_ID = false,
-                         .DLC = 8,
-                         .ID = 0x523,
-                         .data = {0x60, 0x00, 0x60, 0, 0, 0, 0, 0}};
-CAN_frame SANTAFE_7E4_poll = {.FD = false,
-                              .ext_ID = false,
-                              .DLC = 8,
-                              .ID = 0x7E4,  //Polling frame, 0x22 01 0X
-                              .data = {0x03, 0x22, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00}};
-CAN_frame SANTAFE_7E4_ack = {.FD = false,
-                             .ext_ID = false,
-                             .DLC = 8,
-                             .ID = 0x7E4,  //Ack frame, correct PID is returned. Flow control message
-                             .data = {0x30, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00}};
+    for (uint8_t j = 0; j < 8; j++) {
+      if ((crc & 0x80) != 0) {
+        crc = (crc << 1) ^ 0x1;
+      } else {
+        crc <<= 1;
+      }
+    }
+  }
+  return (uint8_t)crc;
+}
 
-void update_values_battery() {  //This function maps all the values fetched via CAN to the correct parameters used for modbus
+void SantaFePhevBattery::
+    update_values() {  //This function maps all the values fetched via CAN to the correct parameters used for modbus
 
-  datalayer.battery.status.real_soc = (SOC_Display * 10);  //increase SOC range from 0-100.0 -> 100.00
+  datalayer_battery->status.real_soc = (SOC_Display * 10);  //increase SOC range from 0-100.0 -> 100.00
 
-  datalayer.battery.status.soh_pptt = (batterySOH * 100);  //Increase decimals from 100% -> 100.00%
+  datalayer_battery->status.soh_pptt = (batterySOH * 100);  //Increase decimals from 100% -> 100.00%
 
-  datalayer.battery.status.voltage_dV = batteryVoltage;
+  datalayer_battery->status.voltage_dV = batteryVoltage;
 
-  datalayer.battery.status.current_dA = -batteryAmps;
+  datalayer_battery->status.current_dA = -batteryAmps;
 
-  datalayer.battery.status.remaining_capacity_Wh = static_cast<uint32_t>(
-      (static_cast<double>(datalayer.battery.status.real_soc) / 10000) * datalayer.battery.info.total_capacity_Wh);
+  datalayer_battery->status.remaining_capacity_Wh = static_cast<uint32_t>(
+      (static_cast<double>(datalayer_battery->status.real_soc) / 10000) * datalayer_battery->info.total_capacity_Wh);
 
-  datalayer.battery.status.max_discharge_power_W = allowedDischargePower * 10;
+  datalayer_battery->status.max_discharge_power_W = allowedDischargePower * 10;
 
-  datalayer.battery.status.max_charge_power_W = allowedChargePower * 10;
+  datalayer_battery->status.max_charge_power_W = allowedChargePower * 10;
 
-  datalayer.battery.status.cell_max_voltage_mV = CellVoltMax_mV;
+  datalayer_battery->status.cell_max_voltage_mV = CellVoltMax_mV;
 
-  datalayer.battery.status.cell_min_voltage_mV = CellVoltMin_mV;
+  datalayer_battery->status.cell_min_voltage_mV = CellVoltMin_mV;
 
-  datalayer.battery.status.temperature_min_dC = temperatureMin * 10;  //Increase decimals, 17C -> 17.0C
+  datalayer_battery->status.temperature_min_dC = temperatureMin * 10;  //Increase decimals, 17C -> 17.0C
 
-  datalayer.battery.status.temperature_max_dC = temperatureMax * 10;  //Increase decimals, 18C -> 18.0C
+  datalayer_battery->status.temperature_max_dC = temperatureMax * 10;  //Increase decimals, 18C -> 18.0C
 
   if (leadAcidBatteryVoltage < 110) {
     set_event(EVENT_12V_LOW, leadAcidBatteryVoltage);
   }
-
-#ifdef DEBUG_VIA_USB
-
-#endif
 }
 
-void receive_can_battery(CAN_frame rx_frame) {
+void SantaFePhevBattery::handle_incoming_can_frame(CAN_frame rx_frame) {
   switch (rx_frame.ID) {
     case 0x1FF:
-      datalayer.battery.status.CAN_battery_still_alive = CAN_STILL_ALIVE;
+      datalayer_battery->status.CAN_battery_still_alive = CAN_STILL_ALIVE;
       StatusBattery = (rx_frame.data.u8[0] & 0x0F);
       break;
     case 0x4D5:
@@ -113,16 +72,16 @@ void receive_can_battery(CAN_frame rx_frame) {
     case 0x4DD:
       break;
     case 0x4DE:
-      datalayer.battery.status.CAN_battery_still_alive = CAN_STILL_ALIVE;
+      datalayer_battery->status.CAN_battery_still_alive = CAN_STILL_ALIVE;
       break;
     case 0x4E0:
       break;
     case 0x542:
-      datalayer.battery.status.CAN_battery_still_alive = CAN_STILL_ALIVE;
+      datalayer_battery->status.CAN_battery_still_alive = CAN_STILL_ALIVE;
       SOC_Display = ((rx_frame.data.u8[1] << 8) + rx_frame.data.u8[0]) / 2;
       break;
     case 0x588:
-      datalayer.battery.status.CAN_battery_still_alive = CAN_STILL_ALIVE;
+      datalayer_battery->status.CAN_battery_still_alive = CAN_STILL_ALIVE;
       batteryVoltage = ((rx_frame.data.u8[1] << 8) + rx_frame.data.u8[0]);
       break;
     case 0x597:
@@ -132,7 +91,7 @@ void receive_can_battery(CAN_frame rx_frame) {
     case 0x5A7:
       break;
     case 0x5AD:
-      datalayer.battery.status.CAN_battery_still_alive = CAN_STILL_ALIVE;
+      datalayer_battery->status.CAN_battery_still_alive = CAN_STILL_ALIVE;
       batteryAmps = (rx_frame.data.u8[3] << 8) + rx_frame.data.u8[2];
       break;
     case 0x5AE:
@@ -140,24 +99,25 @@ void receive_can_battery(CAN_frame rx_frame) {
     case 0x5F1:
       break;
     case 0x620:
-      datalayer.battery.status.CAN_battery_still_alive = CAN_STILL_ALIVE;
+      datalayer_battery->status.CAN_battery_still_alive = CAN_STILL_ALIVE;
       leadAcidBatteryVoltage = rx_frame.data.u8[1];
       temperatureMin = rx_frame.data.u8[6];  //Lowest temp in battery
       temperatureMax = rx_frame.data.u8[7];  //Highest temp in battery
       break;
     case 0x670:
-      datalayer.battery.status.CAN_battery_still_alive = CAN_STILL_ALIVE;
+      datalayer_battery->status.CAN_battery_still_alive = CAN_STILL_ALIVE;
       allowedChargePower = ((rx_frame.data.u8[1] << 8) | rx_frame.data.u8[0]);
       allowedDischargePower = ((rx_frame.data.u8[3] << 8) | rx_frame.data.u8[2]);
       break;
     case 0x671:
-      datalayer.battery.status.CAN_battery_still_alive = CAN_STILL_ALIVE;
+      datalayer_battery->status.CAN_battery_still_alive = CAN_STILL_ALIVE;
       break;
     case 0x7EC:  //Data From polled PID group, BigEndian
       switch (rx_frame.data.u8[0]) {
         case 0x10:  //"PID Header"
           if (rx_frame.data.u8[4] == poll_data_pid) {
-            transmit_can(&SANTAFE_7E4_ack, can_config.battery);  //Send ack to BMS if the same frame is sent as polled
+            transmit_can_frame(&SANTAFE_7E4_ack,
+                               can_interface);  //Send ack to BMS if the same frame is sent as polled
           }
           break;
         case 0x21:  //First frame in PID group
@@ -302,7 +262,7 @@ void receive_can_battery(CAN_frame rx_frame) {
             cellvoltages_mv[95] = (rx_frame.data.u8[5] * 20);
 
             //Map all cell voltages to the global array, we have sampled them all!
-            memcpy(datalayer.battery.status.cell_voltages_mV, cellvoltages_mv, 96 * sizeof(uint16_t));
+            memcpy(datalayer_battery->status.cell_voltages_mV, cellvoltages_mv, 96 * sizeof(uint16_t));
           } else if (poll_data_pid == 5) {
           }
           break;
@@ -318,17 +278,10 @@ void receive_can_battery(CAN_frame rx_frame) {
       break;
   }
 }
-void send_can_battery() {
-  unsigned long currentMillis = millis();
 
+void SantaFePhevBattery::transmit_can(unsigned long currentMillis) {
   //Send 10ms message
   if (currentMillis - previousMillis10 >= INTERVAL_10_MS) {
-    // Check if sending of CAN messages has been delayed too much.
-    if ((currentMillis - previousMillis10 >= INTERVAL_10_MS_DELAYED) && (currentMillis > BOOTUP_TIME)) {
-      set_event(EVENT_CAN_OVERRUN, (currentMillis - previousMillis10));
-    } else {
-      clear_event(EVENT_CAN_OVERRUN);
-    }
     previousMillis10 = currentMillis;
 
     SANTAFE_200.data.u8[6] = (counter_200 << 1);
@@ -337,11 +290,9 @@ void send_can_battery() {
 
     SANTAFE_200.data.u8[7] = checksum_200;
 
-    transmit_can(&SANTAFE_200, can_config.battery);
-
-    transmit_can(&SANTAFE_2A1, can_config.battery);
-
-    transmit_can(&SANTAFE_2F0, can_config.battery);
+    transmit_can_frame(&SANTAFE_200, can_interface);
+    transmit_can_frame(&SANTAFE_2A1, can_interface);
+    transmit_can_frame(&SANTAFE_2F0, can_interface);
 
     counter_200++;
     if (counter_200 > 0xF) {
@@ -353,62 +304,31 @@ void send_can_battery() {
   if (currentMillis - previousMillis100 >= INTERVAL_100_MS) {
     previousMillis100 = currentMillis;
 
-    transmit_can(&SANTAFE_523, can_config.battery);
+    transmit_can_frame(&SANTAFE_523, can_interface);
   }
 
   // Send 500ms CAN Message
   if (currentMillis - previousMillis500 >= INTERVAL_500_MS) {
     previousMillis500 = currentMillis;
 
-    //PID data is polled after last message sent from battery:
-    if (poll_data_pid >= 5) {  //polling one of 5 PIDs at 100ms, resolution = 500ms
-      poll_data_pid = 0;
-    }
-    poll_data_pid++;
-    if (poll_data_pid == 1) {
-      SANTAFE_7E4_poll.data.u8[3] = 0x01;
-      transmit_can(&SANTAFE_7E4_poll, can_config.battery);
-    } else if (poll_data_pid == 2) {
-      SANTAFE_7E4_poll.data.u8[3] = 0x02;
-      transmit_can(&SANTAFE_7E4_poll, can_config.battery);
-    } else if (poll_data_pid == 3) {
-      SANTAFE_7E4_poll.data.u8[3] = 0x03;
-      transmit_can(&SANTAFE_7E4_poll, can_config.battery);
-    } else if (poll_data_pid == 4) {
-      SANTAFE_7E4_poll.data.u8[3] = 0x04;
-      transmit_can(&SANTAFE_7E4_poll, can_config.battery);
-    } else if (poll_data_pid == 5) {
-      SANTAFE_7E4_poll.data.u8[3] = 0x05;
-      transmit_can(&SANTAFE_7E4_poll, can_config.battery);
-    }
+    // PID data is polled after last message sent from battery:
+    poll_data_pid = (poll_data_pid % 5) + 1;
+    SANTAFE_7E4_poll.data.u8[3] = (uint8_t)poll_data_pid;
+    transmit_can_frame(&SANTAFE_7E4_poll, can_interface);
   }
 }
 
-uint8_t CalculateCRC8(CAN_frame rx_frame) {
-  int crc = 0;
-
-  for (uint8_t framepos = 0; framepos < 8; framepos++) {
-    crc ^= rx_frame.data.u8[framepos];
-
-    for (uint8_t j = 0; j < 8; j++) {
-      if ((crc & 0x80) != 0) {
-        crc = (crc << 1) ^ 0x1;
-      } else {
-        crc <<= 1;
-      }
-    }
-  }
-  return (uint8_t)crc;
-}
-
-void setup_battery(void) {  // Performs one time setup at startup
-  strncpy(datalayer.system.info.battery_protocol, "Santa Fe PHEV", 63);
+void SantaFePhevBattery::setup(void) {  // Performs one time setup at startup
+  strncpy(datalayer.system.info.battery_protocol, Name, 63);
   datalayer.system.info.battery_protocol[63] = '\0';
-  datalayer.battery.info.number_of_cells = 96;
-  datalayer.battery.info.max_design_voltage_dV = MAX_PACK_VOLTAGE_DV;
-  datalayer.battery.info.min_design_voltage_dV = MIN_PACK_VOLTAGE_DV;
-  datalayer.battery.info.max_cell_voltage_mV = MAX_CELL_VOLTAGE_MV;
-  datalayer.battery.info.min_cell_voltage_mV = MIN_CELL_VOLTAGE_MV;
-}
+  datalayer_battery->info.number_of_cells = 96;
+  datalayer_battery->info.max_design_voltage_dV = MAX_PACK_VOLTAGE_DV;
+  datalayer_battery->info.min_design_voltage_dV = MIN_PACK_VOLTAGE_DV;
+  datalayer_battery->info.max_cell_voltage_mV = MAX_CELL_VOLTAGE_MV;
+  datalayer_battery->info.min_cell_voltage_mV = MIN_CELL_VOLTAGE_MV;
+  datalayer_battery->info.max_cell_voltage_deviation_mV = MAX_CELL_DEVIATION_MV;
 
-#endif
+  if (allows_contactor_closing) {
+    *allows_contactor_closing = true;
+  }
+}
