@@ -25,3 +25,7 @@ compile.bat
 
 # Ignore secret file
 USER_SECRETS.h
+
+# Ignore Cursor
+.cursor/
+.context/
