@@ -50,6 +50,7 @@ void setup_can_shunt();
 #include "TEST-FAKE-BATTERY.h"
 #include "VOLVO-SPA-BATTERY.h"
 #include "VOLVO-SPA-HYBRID-BATTERY.h"
+#include "BATMAN-BATTERY.h"
 
 void setup_battery(void);
 
