@@ -9,8 +9,8 @@ String BatmanHtmlRenderer::get_status_html() {
 }
 
 void BatmanHtmlRenderer::battery_specific_status(String* content) {
-  // Get reference to the Batman battery instance
   // This function displays Batman-specific information on the web interface
+  // Data is accessed through the global datalayer structure
   
   content->concat("<h4>Batman IC Status</h4>");
   content->concat("<table>");
@@ -65,7 +65,9 @@ void BatmanHtmlRenderer::battery_specific_status(String* content) {
   content->concat("<h4>Batman IC Communication</h4>");
   content->concat("<table>");
   
-  content->concat("<tr><td>Interface:</td><td>Tesla Batman IC + AS8510</td></tr>");
+  content->concat("<tr><td>Interface:</td><td>");
+  content->concat(battery_.interface_name());
+  content->concat("</td></tr>");
   content->concat("<tr><td>Communication:</td><td>SPI @ 1MHz</td></tr>");
   content->concat("<tr><td>Current Sensor:</td><td>AS8510 Coulomb Counter</td></tr>");
   
@@ -80,6 +82,12 @@ void BatmanHtmlRenderer::battery_specific_status(String* content) {
   content->concat("<tr><td>Max Pack Voltage:</td><td>420V</td></tr>");
   content->concat("<tr><td>Min Pack Voltage:</td><td>280V</td></tr>");
   content->concat("<tr><td>Balance Hysteresis:</td><td>20mV</td></tr>");
+  content->concat("<tr><td>Manual Balancing:</td><td>");
+  content->concat(battery_.supports_manual_balancing() ? "Supported" : "Not Supported");
+  content->concat("</td></tr>");
+  content->concat("<tr><td>Real BMS Status:</td><td>");
+  content->concat(battery_.supports_real_BMS_status() ? "Supported" : "Not Supported");
+  content->concat("</td></tr>");
   
   content->concat("</table>");
   

@@ -26,8 +26,9 @@ compile.bat
 # Ignore secret file
 USER_SECRETS.h
 
-# Ignore Cursor
+# Ignore Cursor / Claude
 .cursor/
 .context/
+.claude/
 node_modules/
 

@@ -6,6 +6,7 @@
 #include <driver/gpio.h>
 #include <SPI.h>
 #include <cstring>
+#include <cmath>  // For NaN and isnan functions
 
 // Batman IC command words
 static const uint16_t CMD_WAKE_UP[2] = {0x2AD4, 0x0000};
@@ -59,16 +60,16 @@ BatmanBattery::BatmanBattery() :
     last_update_10ms(0),
     last_update_1s(0),
     last_state_machine(0),
-    cell_voltage_max(0),
-    cell_voltage_min(5000),  // Start high
-    temperature_max(0),
-    temperature_min(1000),   // Start high
+    cell_voltage_max(NAN),
+    cell_voltage_min(NAN),  // Start as NaN (no data)
+    temperature_max(NAN),
+    temperature_min(NAN),   // Start as NaN (no data)
     cells_present(0),
     cells_balancing(0),
     pack_current_A(0),
     pack_power_W(0) {
     
-    // Initialize arrays
+    // Initialize arrays to 0 (no data available)
     memset(cell_voltages, 0, sizeof(cell_voltages));
     memset(cell_balance_cmd, 0, sizeof(cell_balance_cmd));
     memset(chip_temperatures, 0, sizeof(chip_temperatures));
@@ -145,6 +146,7 @@ void BatmanBattery::init_batman_spi() {
     esp_err_t ret = spi_bus_initialize(BMB_SPI_HOST, &bus_config, SPI_DMA_CH_AUTO);
     if (ret != ESP_OK) {
         Serial.printf("SPI bus initialization failed: %d\n", ret);
+        datalayer.battery.status.bms_status = FAULT;
         return;
     }
     
@@ -168,6 +170,7 @@ void BatmanBattery::init_batman_spi() {
     ret = spi_bus_add_device(BMB_SPI_HOST, &dev_config, &spi_dev);
     if (ret != ESP_OK) {
         Serial.printf("SPI device add failed: %d\n", ret);
+        datalayer.battery.status.bms_status = FAULT;
         return;
     }
     
@@ -224,6 +227,8 @@ uint16_t BatmanBattery::spi_xfer(uint16_t data) {
     // Perform transaction
     esp_err_t ret = spi_device_transmit(spi_dev, &trans);
     if (ret != ESP_OK) {
+        Serial.printf("SPI transaction failed: %d\n", ret);
+        bmb_timeout = true;
         return 0;
     }
     
@@ -340,22 +345,99 @@ void BatmanBattery::batman_get_data(uint8_t reg_id) {
 }
 
 void BatmanBattery::batman_write_config() {
-    // Implementation for writing balance configuration
-    // This would include the 3-phase balancing logic from the original code
-    // For now, simplified version
+    // CMD(one byte) PEC(one byte)
+    uint8_t temp_data[6] = {0};
+    uint16_t cfgwrt[25] = {0};
+    
+    // Set the write configuration command (0x11) with PEC
+    cfgwrt[0] = 0x112F;  // CMD
+    
+    for (int h = 0; h < chip_count; h++) {
+        // Set configuration register address (0xF3) and initial value (0x00)
+        temp_data[0] = 0xF3;
+        temp_data[1] = 0x00;
+        
+        // Copy all cells we want to balance
+        temp_data[2] = cell_balance_cmd[chip_count - 1 - h] & 0x00FF;  // balancing 8-1
+        temp_data[3] = (cell_balance_cmd[chip_count - 1 - h] & 0xFF00) >> 8;  // balancing 16-9
+        
+        // Implement 3-phase balancing: measurement only, even cells, odd cells
+        if (balance_phase == 0) {
+            // Phase 0: Measurement only - no balancing (0x00 = 00000000)
+            temp_data[2] = 0x00;
+            temp_data[3] = 0x00;
+        } else if (balance_phase == 1) {
+            // Phase 1: Balance even cells only (0xAA = 10101010)
+            temp_data[2] = temp_data[2] & 0xAA;
+            temp_data[3] = temp_data[3] & 0xAA;
+        } else {
+            // Phase 2: Balance odd cells only (0x55 = 01010101)
+            temp_data[2] = temp_data[2] & 0x55;
+            temp_data[3] = temp_data[3] & 0x55;
+        }
+        
+        // Calculate PEC (Packet Error Code) for data integrity
+        uint16_t pay_pec = 0x0010;
+        crc14_bytes(4, temp_data, &pay_pec);
+        crc14_bits(2, 2, &pay_pec);
+        
+        // Pack the configuration data into the write buffer
+        cfgwrt[1 + h * 3] = temp_data[1] + (temp_data[0] << 8);
+        cfgwrt[2 + h * 3] = temp_data[3] + (temp_data[2] << 8);
+        cfgwrt[3 + h * 3] = pay_pec;
+    }
+    
+    // Send the configuration data over SPI
+    gpio_set_level(BMB_CS, 0);  // CS active low
+    for (int cnt = 0; cnt < 25; cnt++) {
+        spi_xfer(cfgwrt[cnt]);
+    }
+    gpio_set_level(BMB_CS, 1);  // CS inactive high
+    
+    delayMicroseconds(125);
 }
 
 void BatmanBattery::read_current_sensor() {
-    // Simplified AS8510 reading - in a real implementation this would
-    // include proper AS8510 communication protocol
-    // For now, set a default value
-    pack_current_A = 0.0;  // Would read from AS8510 sensor
+    // AS8510 current sensor reading using Arduino SPI
+    SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
+    
+    digitalWrite(AS8510_CS_PIN, LOW);
+    
+    // Read current data registers (0x00 and 0x01)
+    SPI.transfer(0x00);  // Current Data 1 register
+    uint8_t current_data1 = SPI.transfer(0x00);
+    
+    digitalWrite(AS8510_CS_PIN, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(AS8510_CS_PIN, LOW);
+    
+    SPI.transfer(0x01);  // Current Data 2 register
+    uint8_t current_data2 = SPI.transfer(0x00);
+    
+    digitalWrite(AS8510_CS_PIN, HIGH);
+    SPI.endTransaction();
+    
+    // Combine the two bytes to form 16-bit ADC value
+    int16_t raw_adc = (current_data1 << 8) | current_data2;
+    
+    // Convert to current using shunt resistance
+    // AS8510 has 16-bit ADC, reference voltage is typically 2.5V
+    // Current = (ADC_Value / 65536) * Vref / Shunt_Resistance
+    float vref = 2.5;  // Reference voltage
+    float adc_voltage = (raw_adc / 65536.0) * vref;
+    pack_current_A = adc_voltage / SHUNT_RESISTANCE;
+    
+    // Calculate power
+    if (cells_present > 0) {
+        float pack_voltage = datalayer.battery.status.voltage_dV / 10.0;  // Convert dV to V
+        pack_power_W = pack_voltage * pack_current_A;
+    }
 }
 
 void BatmanBattery::update_cell_voltages() {
     // Process cell voltage data and calculate statistics
     cell_voltage_max = 0;
-    cell_voltage_min = 5000;
+    cell_voltage_min = 5000;  // Start high to find actual minimum
     cells_present = 0;
     float total_voltage = 0;
     
@@ -367,7 +449,7 @@ void BatmanBattery::update_cell_voltages() {
     for (int chip = 0; chip < chip_count; chip++) {
         for (int cell = 0; cell < 15; cell++) {
             uint16_t voltage = cell_voltages[chip][cell];
-            if (voltage > 10) {  // Valid cell voltage (same threshold as context code)
+            if (voltage > 1000) {  // Valid cell voltage (>1V, reasonable threshold)
                 cells_present++;
                 total_voltage += voltage;
                 
@@ -393,6 +475,11 @@ void BatmanBattery::update_cell_voltages() {
         datalayer.battery.status.voltage_dV = total_voltage / 100;  // Convert mV to dV
         datalayer.battery.status.cell_max_voltage_mV = cell_voltage_max;
         datalayer.battery.status.cell_min_voltage_mV = cell_voltage_min;
+    } else {
+        // No valid cells detected - set to NaN/invalid values
+        datalayer.battery.status.voltage_dV = 0;
+        datalayer.battery.status.cell_max_voltage_mV = 0;
+        datalayer.battery.status.cell_min_voltage_mV = 0;
     }
 }
 
@@ -400,14 +487,28 @@ void BatmanBattery::update_aux_voltages() {
     // Update 5V supply voltages and chip voltages
     for (int i = 0; i < chip_count; i++) {
         // Process chip supply voltages
-        // Convert raw values to actual voltages
+        // Convert raw 5V supply values to actual voltages
+        if (chip_5v_supply[i] > 0) {
+            // AS8510 conversion: raw value / 12.5 = voltage in mV
+            float supply_voltage_mv = chip_5v_supply[i] / 12.5;
+            // Store in mV for consistency with other voltage measurements
+            chip_5v_supply[i] = supply_voltage_mv;
+        }
+        
+        // Process chip total voltages
+        if (chip_voltages[i] > 0) {
+            // Convert raw chip voltage to actual voltage
+            // Typical conversion factor for Batman IC chip voltage
+            float chip_voltage_mv = chip_voltages[i] * 1.28;  // Convert to mV
+            chip_voltages[i] = chip_voltage_mv;
+        }
     }
 }
 
 void BatmanBattery::update_temperatures() {
     // Process temperature data
-    temperature_max = 0;
-    temperature_min = 1000;
+    temperature_max = -1000;  // Start very low to find actual maximum
+    temperature_min = 1000;   // Start high to find actual minimum
     
     for (int i = 0; i < chip_count; i++) {
         if (chip_temperatures[i] > 0) {
@@ -424,8 +525,14 @@ void BatmanBattery::update_temperatures() {
     }
     
     // Update datalayer temperatures
-    datalayer.battery.status.temperature_max_dC = temperature_max * 10;
-    datalayer.battery.status.temperature_min_dC = temperature_min * 10;
+    if (!isnan(temperature_max) && !isnan(temperature_min)) {
+        datalayer.battery.status.temperature_max_dC = temperature_max * 10;
+        datalayer.battery.status.temperature_min_dC = temperature_min * 10;
+    } else {
+        // No valid temperature data
+        datalayer.battery.status.temperature_max_dC = 0;
+        datalayer.battery.status.temperature_min_dC = 0;
+    }
 }
 
 void BatmanBattery::process_balancing() {
@@ -445,7 +552,7 @@ void BatmanBattery::process_balancing() {
         
         for (int cell = 0; cell < 15; cell++) {
             uint16_t voltage = cell_voltages[chip][cell];
-            if (voltage > 10) {  // Valid cell
+            if (voltage > 1000) {  // Valid cell (>1V)
                 if (voltage > (cell_voltage_min + BALANCE_HYSTERESIS_MV)) {
                     // This cell needs balancing
                     cell_balance_cmd[chip] |= (1 << cell);
@@ -468,12 +575,30 @@ void BatmanBattery::update_datalayer_values() {
     datalayer.battery.status.current_dA = pack_current_A * 10;  // Convert A to dA
     datalayer.battery.status.active_power_W = pack_power_W;
     
-    // Set BMS status
-    if (cells_present > 0 && cell_voltage_max < MAX_CELL_VOLTAGE_MV && 
-        cell_voltage_min > MIN_CELL_VOLTAGE_MV) {
-        datalayer.battery.status.bms_status = ACTIVE;
-    } else {
+    // Set BMS status - check for communication timeout and cell voltage limits
+    if (bmb_timeout) {
         datalayer.battery.status.bms_status = FAULT;
+        Serial.println("BMS FAULT: Communication timeout with Batman IC");
+    } else if (cells_present == 0) {
+        datalayer.battery.status.bms_status = FAULT;
+        Serial.println("BMS FAULT: No cells detected");
+    } else if (isnan(cell_voltage_max) || isnan(cell_voltage_min)) {
+        datalayer.battery.status.bms_status = FAULT;
+        Serial.println("BMS FAULT: Invalid cell voltage data");
+    } else if (cell_voltage_max >= MAX_CELL_VOLTAGE_MV) {
+        datalayer.battery.status.bms_status = FAULT;
+        Serial.printf("BMS FAULT: Cell overvoltage detected: %.0fmV\n", cell_voltage_max);
+    } else if (cell_voltage_min <= MIN_CELL_VOLTAGE_MV) {
+        datalayer.battery.status.bms_status = FAULT;
+        Serial.printf("BMS FAULT: Cell undervoltage detected: %.0fmV\n", cell_voltage_min);
+    } else if (!isnan(temperature_max) && temperature_max > 60.0) {
+        datalayer.battery.status.bms_status = FAULT;
+        Serial.printf("BMS FAULT: Overtemperature detected: %.1f°C\n", temperature_max);
+    } else if (!isnan(temperature_min) && temperature_min < -20.0) {
+        datalayer.battery.status.bms_status = FAULT;
+        Serial.printf("BMS FAULT: Undertemperature detected: %.1f°C\n", temperature_min);
+    } else {
+        datalayer.battery.status.bms_status = ACTIVE;
     }
     
     // Calculate power limits based on cell voltages and current SOC
@@ -483,7 +608,9 @@ void BatmanBattery::update_datalayer_values() {
 uint16_t BatmanBattery::calculate_soc() {
     // Simple voltage-based SOC calculation
     // In a real implementation, this would use coulomb counting with AS8510
-    if (cells_present == 0) return 0;
+    if (cells_present == 0 || isnan(cell_voltage_max) || isnan(cell_voltage_min)) {
+        return 0;  // No valid data available
+    }
     
     float avg_cell_voltage = (cell_voltage_max + cell_voltage_min) / 2.0;
     
@@ -499,19 +626,31 @@ void BatmanBattery::calculate_power_limits() {
     uint16_t max_charge_power = 11000;   // 11kW default
     uint16_t max_discharge_power = 30000; // 30kW default
     
-    // Reduce power if cells are near voltage limits
-    if (cell_voltage_max > 4100) {  // 4.1V
-        max_charge_power = max_charge_power * (4200 - cell_voltage_max) / 100;
+    // Only adjust limits if we have valid voltage data
+    if (!isnan(cell_voltage_max) && !isnan(cell_voltage_min)) {
+        // Reduce power if cells are near voltage limits
+        if (cell_voltage_max > 4100) {  // 4.1V
+            max_charge_power = max_charge_power * (4200 - cell_voltage_max) / 100;
+        }
+        
+        if (cell_voltage_min < 3200) {  // 3.2V
+            max_discharge_power = max_discharge_power * (cell_voltage_min - 2700) / 500;
+        }
     }
     
-    if (cell_voltage_min < 3200) {  // 3.2V
-        max_discharge_power = max_discharge_power * (cell_voltage_min - 2700) / 500;
+    // Only adjust for temperature if we have valid temperature data
+    if (!isnan(temperature_max) && !isnan(temperature_min)) {
+        // Reduce power if temperature is extreme
+        if (temperature_max > 45.0 || temperature_min < -10.0) {
+            max_charge_power /= 2;
+            max_discharge_power /= 2;
+        }
     }
     
-    // Reduce power if temperature is extreme
-    if (temperature_max > 45.0 || temperature_min < -10.0) {
-        max_charge_power /= 2;
-        max_discharge_power /= 2;
+    // If no valid data, severely limit power for safety
+    if (cells_present == 0) {
+        max_charge_power = 0;
+        max_discharge_power = 0;
     }
     
     datalayer.battery.status.max_charge_power_W = max_charge_power;
@@ -610,7 +749,7 @@ BatmanBattery::CellPosition BatmanBattery::get_cell_hardware_position(int sequen
     
     for (int chip = 0; chip < chip_count; chip++) {
         for (int cell = 0; cell < 15; cell++) {
-            if (cell_voltages[chip][cell] > 10) { // Cell is present
+            if (cell_voltages[chip][cell] > 1000) { // Cell is present (>1V)
                 cell_count++;
                 if (cell_count == sequential_cell_num) {
                     pos.chip = chip;
@@ -629,7 +768,7 @@ int BatmanBattery::get_sequential_cell_number(int chip, int register_pos) const 
     
     for (int i = 0; i < chip_count; i++) {
         for (int j = 0; j < 15; j++) {
-            if (cell_voltages[i][j] > 10) { // Cell is present
+            if (cell_voltages[i][j] > 1000) { // Cell is present (>1V)
                 cell_count++;
                 if (i == chip && j == register_pos) {
                     return cell_count;
@@ -638,4 +777,20 @@ int BatmanBattery::get_sequential_cell_number(int chip, int register_pos) const 
         }
     }
     return 0;
+}
+
+bool BatmanBattery::check_spi_communication() {
+    // Simple SPI communication test
+    gpio_set_level(BMB_CS, 0);
+    uint16_t test_response = spi_xfer(0x4D);  // Try to read Aux A register
+    gpio_set_level(BMB_CS, 1);
+    
+    if (test_response == 0xFFFF || test_response == 0x0000) {
+        return false;
+    }
+    return true;
+}
+
+void BatmanBattery::reset_communication_timeout() {
+    bmb_timeout = false;
 } 

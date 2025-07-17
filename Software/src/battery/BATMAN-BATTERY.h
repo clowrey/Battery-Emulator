@@ -34,7 +34,7 @@ class BatmanBattery : public Battery {
 
   virtual void setup(void) override;
   virtual void update_values() override;
-  virtual String interface_name() override { return "Batman IC + AS8510"; }
+  virtual String interface_name() override { return "Tesla Batman IC + AS8510"; }
 
   // Batman-specific capabilities
   virtual bool supports_manual_balancing() override { return true; }
@@ -110,6 +110,10 @@ class BatmanBattery : public Battery {
   void crc14_bits(uint8_t len, uint8_t data, uint16_t* crc);
   uint16_t rev16(uint16_t x) { return ((x & 0xFF00) >> 8) | ((x & 0x00FF) << 8); }
   
+  // Error handling and diagnostics
+  bool check_spi_communication();
+  void reset_communication_timeout();
+  
   // Data processing functions
   void process_register_data(uint8_t reg_id, uint8_t* data);
   void process_cell_voltage_data(uint8_t reg_id, uint8_t* data);
@@ -138,6 +142,13 @@ class BatmanBattery : public Battery {
   static const int MIN_CELL_VOLTAGE_MV = 2700;  // 2.7V
   static const int MAX_CELL_DEVIATION_MV = 100; // 100mV
   static const int BALANCE_HYSTERESIS_MV = 20;  // 20mV balance hysteresis
+  
+  // Timeout constants
+  static const unsigned long BMB_TIMEOUT_MS = 5000;  // 5 second timeout
+  static const unsigned long CURRENT_SENSOR_TIMEOUT_MS = 2000;  // 2 second timeout
+  
+  // Cell voltage constants
+  static const uint16_t VALID_CELL_VOLTAGE_THRESHOLD_MV = 1000;  // 1V minimum for valid cell
   
   static const unsigned long STATE_MACHINE_INTERVAL = 100;  // 100ms
   static const unsigned long UPDATE_10MS_INTERVAL = 10;
