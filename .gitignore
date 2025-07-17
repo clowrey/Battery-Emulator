@@ -29,3 +29,5 @@ USER_SECRETS.h
 # Ignore Cursor
 .cursor/
 .context/
+node_modules/
+

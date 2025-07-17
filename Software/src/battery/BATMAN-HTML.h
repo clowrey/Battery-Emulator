@@ -2,6 +2,7 @@
 #define BATMAN_HTML_H
 
 #include "../devboard/webserver/BatteryHtmlRenderer.h"
+#include "../system_settings.h"
 
 class BatmanBattery;  // Forward declaration
 

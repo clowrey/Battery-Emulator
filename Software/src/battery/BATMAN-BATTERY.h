@@ -121,6 +121,16 @@ class BatmanBattery : public Battery {
   void calculate_power_limits();
   void update_datalayer_values();
   
+  // Helper functions for cell mapping
+  struct CellPosition {
+    int chip;
+    int register_pos;
+    bool valid;
+  };
+  
+  CellPosition get_cell_hardware_position(int sequential_cell_num) const;
+  int get_sequential_cell_number(int chip, int register_pos) const;
+  
   // Constants
   static const int MAX_PACK_VOLTAGE_DV = 4200;  // 420.0V
   static const int MIN_PACK_VOLTAGE_DV = 2800;  // 280.0V

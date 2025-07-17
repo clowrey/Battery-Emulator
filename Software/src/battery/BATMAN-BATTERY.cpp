@@ -5,6 +5,7 @@
 #include "../include.h"
 #include <driver/gpio.h>
 #include <SPI.h>
+#include <cstring>
 
 // Batman IC command words
 static const uint16_t CMD_WAKE_UP[2] = {0x2AD4, 0x0000};
@@ -358,12 +359,23 @@ void BatmanBattery::update_cell_voltages() {
     cells_present = 0;
     float total_voltage = 0;
     
+    // Clear the datalayer cell voltage array first
+    memset(datalayer.battery.status.cell_voltages_mV, 0, sizeof(datalayer.battery.status.cell_voltages_mV));
+    
+    // Iterate through all chips and cells, storing only valid cells sequentially
+    int cell_index = 0;
     for (int chip = 0; chip < chip_count; chip++) {
         for (int cell = 0; cell < 15; cell++) {
             uint16_t voltage = cell_voltages[chip][cell];
-            if (voltage > 10) {  // Valid cell voltage
+            if (voltage > 10) {  // Valid cell voltage (same threshold as context code)
                 cells_present++;
                 total_voltage += voltage;
+                
+                // Store individual cell voltage in datalayer sequentially
+                if (cell_index < MAX_AMOUNT_CELLS) {
+                    datalayer.battery.status.cell_voltages_mV[cell_index] = voltage;
+                    cell_index++;
+                }
                 
                 if (voltage > cell_voltage_max) {
                     cell_voltage_max = voltage;
@@ -419,20 +431,32 @@ void BatmanBattery::update_temperatures() {
 void BatmanBattery::process_balancing() {
     cells_balancing = 0;
     
+    // Clear the datalayer cell balancing status array first
+    memset(datalayer.battery.status.cell_balancing_status, 0, sizeof(datalayer.battery.status.cell_balancing_status));
+    
     if (!balance_enabled) {
         return;
     }
     
-    // Calculate which cells need balancing
+    // Calculate which cells need balancing using sequential indexing
+    int cell_index = 0;
     for (int chip = 0; chip < chip_count; chip++) {
         cell_balance_cmd[chip] = 0;
         
         for (int cell = 0; cell < 15; cell++) {
             uint16_t voltage = cell_voltages[chip][cell];
-            if (voltage > 10 && voltage > (cell_voltage_min + BALANCE_HYSTERESIS_MV)) {
-                // This cell needs balancing
-                cell_balance_cmd[chip] |= (1 << cell);
-                cells_balancing++;
+            if (voltage > 10) {  // Valid cell
+                if (voltage > (cell_voltage_min + BALANCE_HYSTERESIS_MV)) {
+                    // This cell needs balancing
+                    cell_balance_cmd[chip] |= (1 << cell);
+                    cells_balancing++;
+                    
+                    // Update datalayer cell balancing status using sequential index
+                    if (cell_index < MAX_AMOUNT_CELLS) {
+                        datalayer.battery.status.cell_balancing_status[cell_index] = true;
+                    }
+                }
+                cell_index++;  // Increment for each valid cell
             }
         }
     }
@@ -578,4 +602,40 @@ void BatmanBattery::crc14_bits(uint8_t len, uint8_t data, uint16_t* crc) {
         }
         *crc &= 0x3FFF;  // Keep only 14 bits
     }
+}
+
+BatmanBattery::CellPosition BatmanBattery::get_cell_hardware_position(int sequential_cell_num) const {
+    CellPosition pos = {0, 0, false};
+    int cell_count = 0;
+    
+    for (int chip = 0; chip < chip_count; chip++) {
+        for (int cell = 0; cell < 15; cell++) {
+            if (cell_voltages[chip][cell] > 10) { // Cell is present
+                cell_count++;
+                if (cell_count == sequential_cell_num) {
+                    pos.chip = chip;
+                    pos.register_pos = cell;
+                    pos.valid = true;
+                    return pos;
+                }
+            }
+        }
+    }
+    return pos;
+}
+
+int BatmanBattery::get_sequential_cell_number(int chip, int register_pos) const {
+    int cell_count = 0;
+    
+    for (int i = 0; i < chip_count; i++) {
+        for (int j = 0; j < 15; j++) {
+            if (cell_voltages[i][j] > 10) { // Cell is present
+                cell_count++;
+                if (i == chip && j == register_pos) {
+                    return cell_count;
+                }
+            }
+        }
+    }
+    return 0;
 } 

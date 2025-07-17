@@ -82,4 +82,33 @@ void BatmanHtmlRenderer::battery_specific_status(String* content) {
   content->concat("<tr><td>Balance Hysteresis:</td><td>20mV</td></tr>");
   
   content->concat("</table>");
+  
+  // Display individual cell voltages if available
+  if (datalayer.battery.info.number_of_cells > 0) {
+    content->concat("<h4>Individual Cell Voltages</h4>");
+    content->concat("<div style='max-height: 300px; overflow-y: auto;'>");
+    content->concat("<table style='font-size: 12px;'>");
+    content->concat("<tr><th>Cell</th><th>Voltage (mV)</th><th>Balancing</th></tr>");
+    
+    for (int i = 0; i < datalayer.battery.info.number_of_cells && i < MAX_AMOUNT_CELLS; i++) {
+      uint16_t voltage = datalayer.battery.status.cell_voltages_mV[i];
+      bool balancing = datalayer.battery.status.cell_balancing_status[i];
+      
+      // All cells in the array are valid (sequential storage)
+      content->concat("<tr>");
+      content->concat("<td>");
+      content->concat(String(i + 1));
+      content->concat("</td>");
+      content->concat("<td>");
+      content->concat(String(voltage));
+      content->concat("</td>");
+      content->concat("<td>");
+      content->concat(balancing ? "Yes" : "No");
+      content->concat("</td>");
+      content->concat("</tr>");
+    }
+    
+    content->concat("</table>");
+    content->concat("</div>");
+  }
 } 
