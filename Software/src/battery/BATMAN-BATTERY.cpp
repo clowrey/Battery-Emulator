@@ -6,7 +6,6 @@
 #include <driver/gpio.h>
 #include <SPI.h>
 #include <cstring>
-#include <cmath>  // For NaN and isnan functions
 
 // Batman IC command words
 static const uint16_t CMD_WAKE_UP[2] = {0x2AD4, 0x0000};
@@ -60,10 +59,10 @@ BatmanBattery::BatmanBattery() :
     last_update_10ms(0),
     last_update_1s(0),
     last_state_machine(0),
-    cell_voltage_max(NAN),
-    cell_voltage_min(NAN),  // Start as NaN (no data)
-    temperature_max(NAN),
-    temperature_min(NAN),   // Start as NaN (no data)
+    cell_voltage_max(INVALID_VOLTAGE_MV),
+    cell_voltage_min(INVALID_VOLTAGE_MV),  // Start as invalid (no data)
+    temperature_max(0),
+    temperature_min(0),   // Start as invalid (no data)
     cells_present(0),
     cells_balancing(0),
     pack_current_A(0),
@@ -476,10 +475,13 @@ void BatmanBattery::update_cell_voltages() {
         datalayer.battery.status.cell_max_voltage_mV = cell_voltage_max;
         datalayer.battery.status.cell_min_voltage_mV = cell_voltage_min;
     } else {
-        // No valid cells detected - set to NaN/invalid values
+        // No valid cells detected - reset to 0 for consistency
         datalayer.battery.status.voltage_dV = 0;
         datalayer.battery.status.cell_max_voltage_mV = 0;
         datalayer.battery.status.cell_min_voltage_mV = 0;
+        // Reset internal tracking variables to 0 when no cells present
+        cell_voltage_max = 0;
+        cell_voltage_min = 0;
     }
 }
 
@@ -507,29 +509,35 @@ void BatmanBattery::update_aux_voltages() {
 
 void BatmanBattery::update_temperatures() {
     // Process temperature data
-    temperature_max = -1000;  // Start very low to find actual maximum
-    temperature_min = 1000;   // Start high to find actual minimum
+    float temp_max_found = -1000;  // Start very low to find actual maximum
+    float temp_min_found = 1000;   // Start high to find actual minimum
+    bool temp_data_found = false;
     
     for (int i = 0; i < chip_count; i++) {
         if (chip_temperatures[i] > 0) {
             // Convert raw temperature values
             float temp = chip_temperatures[i] * 0.1;  // Example conversion
+            temp_data_found = true;
             
-            if (temp > temperature_max) {
-                temperature_max = temp;
+            if (temp > temp_max_found) {
+                temp_max_found = temp;
             }
-            if (temp < temperature_min) {
-                temperature_min = temp;
+            if (temp < temp_min_found) {
+                temp_min_found = temp;
             }
         }
     }
     
-    // Update datalayer temperatures
-    if (!isnan(temperature_max) && !isnan(temperature_min)) {
+    // Update internal temperature tracking and datalayer
+    if (temp_data_found) {
+        temperature_max = temp_max_found;
+        temperature_min = temp_min_found;
         datalayer.battery.status.temperature_max_dC = temperature_max * 10;
         datalayer.battery.status.temperature_min_dC = temperature_min * 10;
     } else {
-        // No valid temperature data
+        // No valid temperature data - set everything to 0
+        temperature_max = 0;
+        temperature_min = 0;
         datalayer.battery.status.temperature_max_dC = 0;
         datalayer.battery.status.temperature_min_dC = 0;
     }
@@ -582,7 +590,7 @@ void BatmanBattery::update_datalayer_values() {
     } else if (cells_present == 0) {
         datalayer.battery.status.bms_status = FAULT;
         Serial.println("BMS FAULT: No cells detected");
-    } else if (isnan(cell_voltage_max) || isnan(cell_voltage_min)) {
+    } else if (cell_voltage_max == INVALID_VOLTAGE_MV || cell_voltage_min == INVALID_VOLTAGE_MV) {
         datalayer.battery.status.bms_status = FAULT;
         Serial.println("BMS FAULT: Invalid cell voltage data");
     } else if (cell_voltage_max >= MAX_CELL_VOLTAGE_MV) {
@@ -591,10 +599,10 @@ void BatmanBattery::update_datalayer_values() {
     } else if (cell_voltage_min <= MIN_CELL_VOLTAGE_MV) {
         datalayer.battery.status.bms_status = FAULT;
         Serial.printf("BMS FAULT: Cell undervoltage detected: %.0fmV\n", cell_voltage_min);
-    } else if (!isnan(temperature_max) && temperature_max > 60.0) {
+    } else if (temperature_max != 0 && temperature_max > 60.0) {
         datalayer.battery.status.bms_status = FAULT;
         Serial.printf("BMS FAULT: Overtemperature detected: %.1f°C\n", temperature_max);
-    } else if (!isnan(temperature_min) && temperature_min < -20.0) {
+    } else if (temperature_min != 0 && temperature_min < -20.0) {
         datalayer.battery.status.bms_status = FAULT;
         Serial.printf("BMS FAULT: Undertemperature detected: %.1f°C\n", temperature_min);
     } else {
@@ -608,7 +616,7 @@ void BatmanBattery::update_datalayer_values() {
 uint16_t BatmanBattery::calculate_soc() {
     // Simple voltage-based SOC calculation
     // In a real implementation, this would use coulomb counting with AS8510
-    if (cells_present == 0 || isnan(cell_voltage_max) || isnan(cell_voltage_min)) {
+    if (cells_present == 0 || cell_voltage_max == INVALID_VOLTAGE_MV || cell_voltage_min == INVALID_VOLTAGE_MV) {
         return 0;  // No valid data available
     }
     
@@ -627,7 +635,7 @@ void BatmanBattery::calculate_power_limits() {
     uint16_t max_discharge_power = 30000; // 30kW default
     
     // Only adjust limits if we have valid voltage data
-    if (!isnan(cell_voltage_max) && !isnan(cell_voltage_min)) {
+    if (cell_voltage_max != INVALID_VOLTAGE_MV && cell_voltage_min != INVALID_VOLTAGE_MV) {
         // Reduce power if cells are near voltage limits
         if (cell_voltage_max > 4100) {  // 4.1V
             max_charge_power = max_charge_power * (4200 - cell_voltage_max) / 100;
@@ -639,7 +647,7 @@ void BatmanBattery::calculate_power_limits() {
     }
     
     // Only adjust for temperature if we have valid temperature data
-    if (!isnan(temperature_max) && !isnan(temperature_min)) {
+    if (temperature_max != 0 && temperature_min != 0) {
         // Reduce power if temperature is extreme
         if (temperature_max > 45.0 || temperature_min < -10.0) {
             max_charge_power /= 2;

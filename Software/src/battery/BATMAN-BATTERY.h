@@ -149,6 +149,8 @@ class BatmanBattery : public Battery {
   
   // Cell voltage constants
   static const uint16_t VALID_CELL_VOLTAGE_THRESHOLD_MV = 1000;  // 1V minimum for valid cell
+  static const uint16_t INVALID_VOLTAGE_MV = 0;  // Sentinel value for invalid voltage
+  static const int16_t INVALID_TEMPERATURE_dC = 0;  // Sentinel value for invalid temperature
   
   static const unsigned long STATE_MACHINE_INTERVAL = 100;  // 100ms
   static const unsigned long UPDATE_10MS_INTERVAL = 10;
