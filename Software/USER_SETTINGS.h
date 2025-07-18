@@ -146,8 +146,8 @@
 #define SERIAL_API  // Enable this line to enable Serial API output (JSON data over serial)
 #define SERIAL_API_USB_SERIAL  // Enable this line to output Serial API data on main USB serial port (Serial)
 #define SERIAL_API_DEDICATED_SERIAL  // Enable this line to output Serial API data on dedicated serial port (Serial2)
-#define SERIAL_API_TX_PIN 14  // TX pin for dedicated Serial API port (Serial2)
-#define SERIAL_API_RX_PIN 15  // RX pin for dedicated Serial API port (Serial2) - not used but required for Serial2 init
+#define SERIAL_API_TX_PIN 22  // TX pin for dedicated Serial API port (Serial2)
+#define SERIAL_API_RX_PIN 23  // RX pin for dedicated Serial API port (Serial2) - not used but required for Serial2 init
 #define SERIAL_API_BAUDRATE 115200  // Baud rate for dedicated Serial API port
 
 /* Battery settings */

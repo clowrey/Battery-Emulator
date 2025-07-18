@@ -1,0 +1,4 @@
+secrets.yaml
+.esphome/
+_pychache_
+components\battery_monitor\_pychache_

@@ -1,0 +1,261 @@
+substitutions:
+  device_name: battery-emulator-watchdog
+  friendly_name: "Battery Emulator Watchdog"
+
+esphome:
+  name: ${device_name}
+  friendly_name: ${friendly_name}
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+  level: INFO
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "${friendly_name}"
+    password: !secret ap_password
+
+captive_portal:
+
+# UART configuration to read from Battery Emulator's Serial API
+uart:
+  id: battery_uart
+  tx_pin: GPIO23  # Not used, but required
+  rx_pin: GPIO22  # Connect to Battery Emulator's Serial API TX pin (pin 14 by default)
+  baud_rate: 115200
+  debug:
+    direction: RX
+    dummy_receiver: false
+
+# Include the custom battery monitor component
+external_components:
+  - source:
+      type: local
+      path: components
+    components: [battery_monitor]
+
+# Battery Monitor Component
+battery_monitor:
+  uart_id: battery_uart
+  update_interval: 1s
+
+# Sensors for battery data
+sensor:
+  - platform: battery_monitor
+    name: "Battery Monitor"
+    soc:
+      name: "Battery SOC"
+      unit_of_measurement: "%"
+      accuracy_decimals: 1
+      device_class: battery
+      state_class: measurement
+    
+    soc_real:
+      name: "Battery SOC Real"
+      unit_of_measurement: "%"
+      accuracy_decimals: 1
+      device_class: battery
+      state_class: measurement
+    
+    state_of_health:
+      name: "Battery State of Health"
+      unit_of_measurement: "%"
+      accuracy_decimals: 1
+      state_class: measurement
+    
+    temperature_min:
+      name: "Battery Temperature Min"
+      unit_of_measurement: "°C"
+      accuracy_decimals: 1
+      device_class: temperature
+      state_class: measurement
+    
+    temperature_max:
+      name: "Battery Temperature Max"
+      unit_of_measurement: "°C"
+      accuracy_decimals: 1
+      device_class: temperature
+      state_class: measurement
+    
+    cpu_temp:
+      name: "Battery Emulator CPU Temperature"
+      unit_of_measurement: "°C"
+      accuracy_decimals: 1
+      device_class: temperature
+      state_class: measurement
+    
+    battery_power:
+      name: "Battery Power"
+      unit_of_measurement: "W"
+      accuracy_decimals: 0
+      device_class: power
+      state_class: measurement
+    
+    battery_current:
+      name: "Battery Current"
+      unit_of_measurement: "A"
+      accuracy_decimals: 1
+      device_class: current
+      state_class: measurement
+    
+    battery_voltage:
+      name: "Battery Voltage"
+      unit_of_measurement: "V"
+      accuracy_decimals: 1
+      device_class: voltage
+      state_class: measurement
+    
+    cell_max_voltage:
+      name: "Cell Max Voltage"
+      unit_of_measurement: "V"
+      accuracy_decimals: 3
+      device_class: voltage
+      state_class: measurement
+    
+    cell_min_voltage:
+      name: "Cell Min Voltage"
+      unit_of_measurement: "V"
+      accuracy_decimals: 3
+      device_class: voltage
+      state_class: measurement
+    
+    cell_voltage_delta:
+      name: "Cell Voltage Delta"
+      unit_of_measurement: "mV"
+      accuracy_decimals: 0
+      state_class: measurement
+    
+    total_capacity:
+      name: "Battery Total Capacity"
+      unit_of_measurement: "Wh"
+      accuracy_decimals: 0
+      device_class: energy_storage
+      state_class: total
+    
+    remaining_capacity_real:
+      name: "Battery Remaining Capacity Real"
+      unit_of_measurement: "Wh"
+      accuracy_decimals: 0
+      device_class: energy_storage
+      state_class: measurement
+    
+    remaining_capacity:
+      name: "Battery Remaining Capacity"
+      unit_of_measurement: "Wh"
+      accuracy_decimals: 0
+      device_class: energy_storage
+      state_class: measurement
+    
+    max_discharge_power:
+      name: "Max Discharge Power"
+      unit_of_measurement: "W"
+      accuracy_decimals: 0
+      device_class: power
+      state_class: measurement
+    
+    max_charge_power:
+      name: "Max Charge Power"
+      unit_of_measurement: "W"
+      accuracy_decimals: 0
+      device_class: power
+      state_class: measurement
+    
+    charged_energy:
+      name: "Total Charged Energy"
+      unit_of_measurement: "Wh"
+      accuracy_decimals: 0
+      device_class: energy
+      state_class: total_increasing
+    
+    discharged_energy:
+      name: "Total Discharged Energy"
+      unit_of_measurement: "Wh"
+      accuracy_decimals: 0
+      device_class: energy
+      state_class: total_increasing
+    
+    balancing_active_cells:
+      name: "Balancing Active Cells"
+      accuracy_decimals: 0
+      state_class: measurement
+    
+    soc_2:
+      name: "Battery 2 SOC"
+      unit_of_measurement: "%"
+      accuracy_decimals: 1
+      device_class: battery
+      state_class: measurement
+    
+    battery_power_2:
+      name: "Battery 2 Power"
+      unit_of_measurement: "W"
+      accuracy_decimals: 0
+      device_class: power
+      state_class: measurement
+    
+    battery_voltage_2:
+      name: "Battery 2 Voltage"
+      unit_of_measurement: "V"
+      accuracy_decimals: 1
+      device_class: voltage
+      state_class: measurement
+    
+    cell_voltages:
+      - name: "Cell 1 Voltage"
+        index: 0
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 2 Voltage"
+        index: 1
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+
+# Text sensors for status and events
+text_sensor:
+  - platform: battery_monitor
+    name: "Battery Text Sensors"
+    bms_status:
+      name: "BMS Status"
+    
+    pause_status:
+      name: "Emulator Pause Status"
+    
+    last_event:
+      name: "Last Battery Event"
+    
+    event_severity:
+      name: "Event Severity"
+
+# Binary sensors
+binary_sensor:
+  - platform: battery_monitor
+    name: "Battery Binary Sensors"
+    battery_connected:
+      name: "Battery Connected"
+      device_class: connectivity
+    
+    emulator_online:
+      name: "Battery Emulator Online"
+      device_class: connectivity 
