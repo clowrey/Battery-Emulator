@@ -231,6 +231,642 @@ sensor:
         accuracy_decimals: 3
         device_class: voltage
         state_class: measurement
+      - name: "Cell 3 Voltage"
+        index: 2
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 4 Voltage"
+        index: 3
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 5 Voltage"
+        index: 4
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 6 Voltage"
+        index: 5
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 7 Voltage"
+        index: 6
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 8 Voltage"
+        index: 7
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 9 Voltage"
+        index: 8
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 10 Voltage"
+        index: 9
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 11 Voltage"
+        index: 10
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 12 Voltage"
+        index: 11
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 13 Voltage"
+        index: 12
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 14 Voltage"
+        index: 13
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 15 Voltage"
+        index: 14
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 16 Voltage"
+        index: 15
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 17 Voltage"
+        index: 16
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 18 Voltage"
+        index: 17
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 19 Voltage"
+        index: 18
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 20 Voltage"
+        index: 19
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 21 Voltage"
+        index: 20
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 22 Voltage"
+        index: 21
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 23 Voltage"
+        index: 22
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 24 Voltage"
+        index: 23
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 25 Voltage"
+        index: 24
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 26 Voltage"
+        index: 25
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 27 Voltage"
+        index: 26
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 28 Voltage"
+        index: 27
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 29 Voltage"
+        index: 28
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 30 Voltage"
+        index: 29
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 31 Voltage"
+        index: 30
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 32 Voltage"
+        index: 31
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 33 Voltage"
+        index: 32
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 34 Voltage"
+        index: 33
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 35 Voltage"
+        index: 34
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 36 Voltage"
+        index: 35
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 37 Voltage"
+        index: 36
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 38 Voltage"
+        index: 37
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 39 Voltage"
+        index: 38
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 40 Voltage"
+        index: 39
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 41 Voltage"
+        index: 40
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 42 Voltage"
+        index: 41
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 43 Voltage"
+        index: 42
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 44 Voltage"
+        index: 43
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 45 Voltage"
+        index: 44
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 46 Voltage"
+        index: 45
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 47 Voltage"
+        index: 46
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 48 Voltage"
+        index: 47
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 49 Voltage"
+        index: 48
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 50 Voltage"
+        index: 49
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 51 Voltage"
+        index: 50
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 52 Voltage"
+        index: 51
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 53 Voltage"
+        index: 52
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 54 Voltage"
+        index: 53
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 55 Voltage"
+        index: 54
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 56 Voltage"
+        index: 55
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 57 Voltage"
+        index: 56
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 58 Voltage"
+        index: 57
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 59 Voltage"
+        index: 58
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 60 Voltage"
+        index: 59
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 61 Voltage"
+        index: 60
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 62 Voltage"
+        index: 61
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 63 Voltage"
+        index: 62
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 64 Voltage"
+        index: 63
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 65 Voltage"
+        index: 64
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 66 Voltage"
+        index: 65
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 67 Voltage"
+        index: 66
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 68 Voltage"
+        index: 67
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 69 Voltage"
+        index: 68
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 70 Voltage"
+        index: 69
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 71 Voltage"
+        index: 70
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 72 Voltage"
+        index: 71
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 73 Voltage"
+        index: 72
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 74 Voltage"
+        index: 73
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 75 Voltage"
+        index: 74
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 76 Voltage"
+        index: 75
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 77 Voltage"
+        index: 76
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 78 Voltage"
+        index: 77
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 79 Voltage"
+        index: 78
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 80 Voltage"
+        index: 79
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 81 Voltage"
+        index: 80
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 82 Voltage"
+        index: 81
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 83 Voltage"
+        index: 82
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 84 Voltage"
+        index: 83
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 85 Voltage"
+        index: 84
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 86 Voltage"
+        index: 85
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 87 Voltage"
+        index: 86
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 88 Voltage"
+        index: 87
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 89 Voltage"
+        index: 88
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 90 Voltage"
+        index: 89
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 91 Voltage"
+        index: 90
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 92 Voltage"
+        index: 91
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 93 Voltage"
+        index: 92
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 94 Voltage"
+        index: 93
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 95 Voltage"
+        index: 94
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 96 Voltage"
+        index: 95
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 97 Voltage"
+        index: 96
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 98 Voltage"
+        index: 97
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 99 Voltage"
+        index: 98
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 100 Voltage"
+        index: 99
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 101 Voltage"
+        index: 100
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 102 Voltage"
+        index: 101
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 103 Voltage"
+        index: 102
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 104 Voltage"
+        index: 103
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 105 Voltage"
+        index: 104
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 106 Voltage"
+        index: 105
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 107 Voltage"
+        index: 106
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
+      - name: "Cell 108 Voltage"
+        index: 107
+        unit_of_measurement: "V"
+        accuracy_decimals: 3
+        device_class: voltage
+        state_class: measurement
 
 # Text sensors for status and events
 text_sensor:

@@ -202,7 +202,7 @@ CONFIG_SCHEMA = cv.All(
                         ).schema
                     })
                 ),
-                cv.Length(max=96)  # Tesla Model 3 has up to 96 cells
+                cv.Length(max=108)  # Tesla Model 3 has up to 108 cells
             ),
         }
     )

@@ -173,7 +173,15 @@ void BatteryMonitorComponent::handle_spec_data(const std::string &json_data) {
     for (size_t i = 0; i < cell_voltages.size(); ++i) {
       auto it = this->cell_voltage_sensors_.find(i);
       if (it != this->cell_voltage_sensors_.end() && it->second != nullptr) {
-        it->second->publish_state(cell_voltages[i].as<float>());
+        float voltage = cell_voltages[i].as<float>();
+        
+        // Only publish valid voltages (> 10mV = 0.01V)
+        // Reject 0V and very low voltages as invalid readings
+        if (voltage > 0.01f) {
+          it->second->publish_state(voltage);
+        } else {
+          ESP_LOGD(TAG, "Skipping invalid cell %zu voltage: %.3fV (must be > 10mV)", i + 1, voltage);
+        }
       }
     }
   }
