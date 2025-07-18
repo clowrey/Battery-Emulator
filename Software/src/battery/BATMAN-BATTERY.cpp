@@ -140,6 +140,8 @@ void BatmanBattery::update_values() {
   // Update pack voltage in dV (decivolts)
   if (valid_cells > 0) {
     datalayer_battery->status.voltage_dV = (uint16_t)(total_voltage / 100);  // Convert mV to dV
+    // Update number of cells to actual detected count for serial API compatibility
+    datalayer_battery->info.number_of_cells = valid_cells;
   } else {
     datalayer_battery->status.voltage_dV = 3700;  // Fallback
   }
@@ -222,7 +224,7 @@ void BatmanBattery::setup(void) {  // Performs one time setup at startup
   datalayer_battery->info.max_design_voltage_dV =
       4040;  // 404.4V, over this, charging is not possible (goes into forced discharge)
   datalayer_battery->info.min_design_voltage_dV = 2450;  // 245.0V under this, discharging further is disabled
-  datalayer_battery->info.number_of_cells = 96;  // Tesla Model 3: 2x23 + 2x25 = 96 cells
+  datalayer_battery->info.number_of_cells = 96;  // Tesla Model 3: 2x23 + 2x25 = 96 cells (updated dynamically based on detected cells)
 
 #ifdef BATMAN_BATTERY
   // Initialize Batman IC
