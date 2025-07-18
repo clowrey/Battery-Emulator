@@ -16,8 +16,17 @@
  * - Initialize with init_serial_api()
  * - Call serial_api_loop() in main loop
  * 
- * Data format: JSON over serial
+ * Data format: JSON over serial with CRC verification
  * Format: SERIAL_API:<data_type>:<json_message>
+ * 
+ * Cell data format with error checking:
+ * - Cell voltages: {"cell_data": [{"cell": 1, "voltage": 3.45}, ...], "crc": 12345, "num_cells": 96}
+ * - Cell balancing: {"cell_balancing_data": [{"cell": 1, "balancing": true}, ...], "crc": 12345, "num_cells": 96}
+ * 
+ * CRC verification:
+ * - Uses CRC-CCITT (polynomial 0x1021) for data integrity
+ * - CRC calculated over raw cell data arrays before JSON conversion
+ * - Recipients should verify CRC matches expected value for data validation
  */
 
 #ifndef __SERIAL_API_H__

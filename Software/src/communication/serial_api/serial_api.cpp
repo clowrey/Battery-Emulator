@@ -17,6 +17,34 @@ MyTimer publish_serial_timer(5000);  // publish timer - same as MQTT (5 seconds)
 MyTimer check_serial_timer(800);     // check timer - same as MQTT (800ms)
 bool serial_api_initialized = false;
 
+// CRC16 calculation for data integrity verification
+static uint16_t calculate_crc16(const uint8_t* data, size_t length) {
+  uint16_t crc = 0xFFFF;
+  const uint16_t polynomial = 0x1021; // CRC-CCITT polynomial
+  
+  for (size_t i = 0; i < length; i++) {
+    crc ^= (uint16_t)(data[i] << 8);
+    for (int j = 0; j < 8; j++) {
+      if (crc & 0x8000) {
+        crc = (crc << 1) ^ polynomial;
+      } else {
+        crc <<= 1;
+      }
+    }
+  }
+  return crc;
+}
+
+// Calculate CRC for cell voltage array
+static uint16_t calculate_cell_voltage_crc(const uint16_t* cell_voltages, size_t num_cells) {
+  return calculate_crc16((const uint8_t*)cell_voltages, num_cells * sizeof(uint16_t));
+}
+
+// Calculate CRC for cell balancing array  
+static uint16_t calculate_cell_balancing_crc(const bool* cell_balancing, size_t num_cells) {
+  return calculate_crc16((const uint8_t*)cell_balancing, num_cells * sizeof(bool));
+}
+
 static bool publish_serial_common_info(void);
 static bool publish_serial_cell_voltages(void);
 static bool publish_serial_cell_balancing(void);
@@ -131,10 +159,19 @@ static bool publish_serial_cell_voltages(void) {
   if (datalayer.battery.info.number_of_cells != 0u &&
       datalayer.battery.status.cell_voltages_mV[datalayer.battery.info.number_of_cells - 1] != 0u) {
 
-    JsonArray cell_voltages = doc["cell_voltages"].to<JsonArray>();
+    // Create cell data array with cell numbers and voltages
+    JsonArray cell_data = doc["cell_data"].to<JsonArray>();
     for (size_t i = 0; i < datalayer.battery.info.number_of_cells; ++i) {
-      cell_voltages.add(((float)datalayer.battery.status.cell_voltages_mV[i]) / 1000.0);
+      JsonObject cell = cell_data.createNestedObject();
+      cell["cell"] = i + 1;  // Cell numbers start from 1
+      cell["voltage"] = ((float)datalayer.battery.status.cell_voltages_mV[i]) / 1000.0;
     }
+    
+    // Calculate and add CRC for data integrity verification
+    uint16_t crc = calculate_cell_voltage_crc(datalayer.battery.status.cell_voltages_mV, 
+                                              datalayer.battery.info.number_of_cells);
+    doc["crc"] = crc;
+    doc["num_cells"] = datalayer.battery.info.number_of_cells;
 
     serializeJson(doc, serial_api_msg, sizeof(serial_api_msg));
 
@@ -152,10 +189,19 @@ static bool publish_serial_cell_voltages(void) {
     if (datalayer.battery2.info.number_of_cells != 0u &&
         datalayer.battery2.status.cell_voltages_mV[datalayer.battery2.info.number_of_cells - 1] != 0u) {
 
-      JsonArray cell_voltages = doc["cell_voltages"].to<JsonArray>();
+      // Create cell data array with cell numbers and voltages
+      JsonArray cell_data = doc["cell_data"].to<JsonArray>();
       for (size_t i = 0; i < datalayer.battery2.info.number_of_cells; ++i) {
-        cell_voltages.add(((float)datalayer.battery2.status.cell_voltages_mV[i]) / 1000.0);
+        JsonObject cell = cell_data.createNestedObject();
+        cell["cell"] = i + 1;  // Cell numbers start from 1
+        cell["voltage"] = ((float)datalayer.battery2.status.cell_voltages_mV[i]) / 1000.0;
       }
+      
+      // Calculate and add CRC for data integrity verification
+      uint16_t crc = calculate_cell_voltage_crc(datalayer.battery2.status.cell_voltages_mV, 
+                                                datalayer.battery2.info.number_of_cells);
+      doc["crc"] = crc;
+      doc["num_cells"] = datalayer.battery2.info.number_of_cells;
 
       serializeJson(doc, serial_api_msg, sizeof(serial_api_msg));
 
@@ -177,10 +223,19 @@ static bool publish_serial_cell_balancing(void) {
   // If cell balancing data is available...
   if (datalayer.battery.info.number_of_cells != 0u) {
 
-    JsonArray cell_balancing = doc["cell_balancing"].to<JsonArray>();
+    // Create cell balancing data array with cell numbers and status
+    JsonArray cell_data = doc["cell_balancing_data"].to<JsonArray>();
     for (size_t i = 0; i < datalayer.battery.info.number_of_cells; ++i) {
-      cell_balancing.add(datalayer.battery.status.cell_balancing_status[i]);
+      JsonObject cell = cell_data.createNestedObject();
+      cell["cell"] = i + 1;  // Cell numbers start from 1
+      cell["balancing"] = datalayer.battery.status.cell_balancing_status[i];
     }
+    
+    // Calculate and add CRC for data integrity verification
+    uint16_t crc = calculate_cell_balancing_crc(datalayer.battery.status.cell_balancing_status, 
+                                                datalayer.battery.info.number_of_cells);
+    doc["crc"] = crc;
+    doc["num_cells"] = datalayer.battery.info.number_of_cells;
 
     serializeJson(doc, serial_api_msg, sizeof(serial_api_msg));
 
@@ -197,10 +252,19 @@ static bool publish_serial_cell_balancing(void) {
   if (battery2) {
     if (datalayer.battery2.info.number_of_cells != 0u) {
 
-      JsonArray cell_balancing = doc["cell_balancing"].to<JsonArray>();
+      // Create cell balancing data array with cell numbers and status
+      JsonArray cell_data = doc["cell_balancing_data"].to<JsonArray>();
       for (size_t i = 0; i < datalayer.battery2.info.number_of_cells; ++i) {
-        cell_balancing.add(datalayer.battery2.status.cell_balancing_status[i]);
+        JsonObject cell = cell_data.createNestedObject();
+        cell["cell"] = i + 1;  // Cell numbers start from 1
+        cell["balancing"] = datalayer.battery2.status.cell_balancing_status[i];
       }
+      
+      // Calculate and add CRC for data integrity verification
+      uint16_t crc = calculate_cell_balancing_crc(datalayer.battery2.status.cell_balancing_status, 
+                                                  datalayer.battery2.info.number_of_cells);
+      doc["crc"] = crc;
+      doc["num_cells"] = datalayer.battery2.info.number_of_cells;
 
       serializeJson(doc, serial_api_msg, sizeof(serial_api_msg));
 
