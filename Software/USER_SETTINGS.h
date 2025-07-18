@@ -142,6 +142,14 @@
 /* Home Assistant options */
 #define HA_AUTODISCOVERY  // Enable this line to send Home Assistant autodiscovery messages. If not enabled manual configuration of Home Assitant is required
 
+/* Serial API options */
+#define SERIAL_API  // Enable this line to enable Serial API output (JSON data over serial)
+#define SERIAL_API_USB_SERIAL  // Enable this line to output Serial API data on main USB serial port (Serial)
+#define SERIAL_API_DEDICATED_SERIAL  // Enable this line to output Serial API data on dedicated serial port (Serial2)
+#define SERIAL_API_TX_PIN 14  // TX pin for dedicated Serial API port (Serial2)
+#define SERIAL_API_RX_PIN 15  // RX pin for dedicated Serial API port (Serial2) - not used but required for Serial2 init
+#define SERIAL_API_BAUDRATE 115200  // Baud rate for dedicated Serial API port
+
 /* Battery settings */
 // Predefined total energy capacity of the battery in Watt-hours (updates automatically from battery data when available)
 #define BATTERY_WH_MAX 30000

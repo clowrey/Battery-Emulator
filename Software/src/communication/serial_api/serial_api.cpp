@@ -262,8 +262,16 @@ bool publish_serial_events() {
 }
 
 void init_serial_api(void) {
-  // Serial interface is already initialized in main setup
-  // Just mark as initialized
+#ifdef SERIAL_API_DEDICATED_SERIAL
+  // Initialize dedicated serial port (Serial2)
+  Serial2.begin(SERIAL_API_BAUDRATE, SERIAL_8N1, SERIAL_API_RX_PIN, SERIAL_API_TX_PIN);
+#ifdef DEBUG_LOG
+  logging.printf("Serial API dedicated port initialized on pins TX:%d RX:%d at %d baud\n", 
+                 SERIAL_API_TX_PIN, SERIAL_API_RX_PIN, SERIAL_API_BAUDRATE);
+#endif  // DEBUG_LOG
+#endif  // SERIAL_API_DEDICATED_SERIAL
+
+  // Mark as initialized
   serial_api_initialized = true;
   
 #ifdef DEBUG_LOG
@@ -288,11 +296,27 @@ void serial_api_loop(void) {
 }
 
 bool serial_api_publish(const char* data_type, const char* json_msg) {
-  // Send data in format: DATA_TYPE:JSON_MESSAGE\n
+  bool success = true;
+  
+  // Send data in format: SERIAL_API:DATA_TYPE:JSON_MESSAGE\n
+  
+#ifdef SERIAL_API_USB_SERIAL
+  // Send to main USB serial port (Serial)
   Serial.print("SERIAL_API:");
   Serial.print(data_type);
   Serial.print(":");
   Serial.print(json_msg);
   Serial.println();
-  return true;  // Serial always succeeds (no network dependency)
+#endif  // SERIAL_API_USB_SERIAL
+
+#ifdef SERIAL_API_DEDICATED_SERIAL
+  // Send to dedicated serial port (Serial2)
+  Serial2.print("SERIAL_API:");
+  Serial2.print(data_type);
+  Serial2.print(":");
+  Serial2.print(json_msg);
+  Serial2.println();
+#endif  // SERIAL_API_DEDICATED_SERIAL
+
+  return success;  // Serial always succeeds (no network dependency)
 } 
