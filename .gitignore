@@ -27,3 +27,5 @@ compile.bat
 USER_SECRETS.h
 
 context/
+logs/
+
