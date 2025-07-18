@@ -165,6 +165,9 @@ typedef struct {
   /** Sofar CAN Battery ID (0-15) used to parallel multiple packs */
   uint8_t sofar_user_specified_battery_id = 0;
 
+  /** Balancing hysteresis in millivolts - voltage difference above minimum cell voltage where balancing starts */
+  uint16_t balancing_hysteresis_mV = 20;
+
 } DATALAYER_BATTERY_SETTINGS_TYPE;
 
 typedef struct {

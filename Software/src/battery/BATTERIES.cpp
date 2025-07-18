@@ -98,6 +98,8 @@ extern const char* name_for_battery_type(BatteryType type) {
       return VolvoSpaBattery::Name;
     case BatteryType::VolvoSpaHybrid:
       return VolvoSpaHybridBattery::Name;
+    case BatteryType::Batman:
+      return BatmanBattery::Name;
     default:
       return nullptr;
   }
@@ -188,6 +190,8 @@ Battery* create_battery(BatteryType type) {
       return new VolvoSpaBattery();
     case BatteryType::VolvoSpaHybrid:
       return new VolvoSpaHybridBattery();
+    case BatteryType::Batman:
+      return new BatmanBattery();
     default:
       return nullptr;
   }
@@ -224,6 +228,9 @@ void setup_battery() {
       case BatteryType::TestFake:
         battery2 = new TestFakeBattery(&datalayer.battery2, can_config.battery_double);
         break;
+      case BatteryType::Batman:
+        battery2 = new BatmanBattery(&datalayer.battery2, can_config.battery_double);
+        break;
     }
 
     if (battery2) {
@@ -250,7 +257,7 @@ void setup_battery() {
     battery2 = new SELECTED_BATTERY_CLASS(&datalayer.battery2, &datalayer_extended.KiaHyundai64_2,
                                           &datalayer.system.status.battery2_allowed_contactor_closing,
                                           can_config.battery_double);
-#elif defined(SANTA_FE_PHEV_BATTERY) || defined(TEST_FAKE_BATTERY)
+#elif defined(SANTA_FE_PHEV_BATTERY) || defined(TEST_FAKE_BATTERY) || defined(BATMAN_BATTERY)
     battery2 = new SELECTED_BATTERY_CLASS(&datalayer.battery2, can_config.battery_double);
 #else
     battery2 = new SELECTED_BATTERY_CLASS(&datalayer.battery2, nullptr, can_config.battery_double);

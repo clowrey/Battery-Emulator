@@ -5,6 +5,7 @@
 #include "../../../USER_SECRETS.h"
 #include "../../battery/BATTERIES.h"
 #include "../../battery/Battery.h"
+#include "../../battery/BATMAN-BATTERY.h"
 #include "../../communication/contactorcontrol/comm_contactorcontrol.h"
 #include "../../communication/nvm/comm_nvm.h"
 #include "../../datalayer/datalayer.h"
@@ -778,6 +779,54 @@ void init_webserver() {
       datalayer.battery.settings.balancing_max_deviation_cell_voltage_mV = static_cast<uint16_t>(value.toFloat());
       store_settings();
       request->send(200, "text/plain", "Updated successfully");
+    } else {
+      request->send(400, "text/plain", "Bad Request");
+    }
+  });
+
+  // Route for Batman battery balance control (following repository pattern)
+  server.on("/BatmanBalAct", HTTP_GET, [](AsyncWebServerRequest* request) {
+    if (WEBSERVER_AUTH_REQUIRED && !request->authenticate(http_username, http_password))
+      return request->requestAuthentication();
+    
+#ifdef BATMAN_BATTERY
+    if (request->hasParam("value")) {
+      // Check if the current battery is a Batman battery by checking the interface name
+      if (battery && String(battery->interface_name()).indexOf("Batman") >= 0) {
+        // Safe to cast to BatmanBattery since we verified it's the right type
+        BatmanBattery* batmanBattery = static_cast<BatmanBattery*>(battery);
+        
+        // Set the balancing state based on the value (1 = enabled, 0 = disabled)
+        String value = request->getParam("value")->value();
+        batmanBattery->setBalancingEnabled(value.toInt() == 1);
+        
+        request->send(200, "text/plain", "Updated successfully");
+      } else {
+        request->send(400, "text/plain", "Not a Batman battery");
+      }
+    } else {
+      request->send(400, "text/plain", "Bad Request");
+    }
+#else
+    request->send(400, "text/plain", "Batman battery not compiled");
+#endif
+  });
+
+  // Route for updating Batman battery balancing hysteresis
+  server.on("/updateBalancingHysteresis", HTTP_GET, [](AsyncWebServerRequest* request) {
+    if (WEBSERVER_AUTH_REQUIRED && !request->authenticate(http_username, http_password))
+      return request->requestAuthentication();
+    if (request->hasParam("value")) {
+      String value = request->getParam("value")->value();
+      uint16_t val = value.toInt();
+      // Validate range: 1-100 mV
+      if (val >= 1 && val <= 100) {
+        datalayer.battery.settings.balancing_hysteresis_mV = val;
+        store_settings();
+        request->send(200, "text/plain", "Updated successfully");
+      } else {
+        request->send(400, "text/plain", "Value must be between 1 and 100 mV");
+      }
     } else {
       request->send(400, "text/plain", "Bad Request");
     }

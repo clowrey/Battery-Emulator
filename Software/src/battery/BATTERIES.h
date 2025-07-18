@@ -48,6 +48,7 @@ void setup_can_shunt();
 #include "SONO-BATTERY.h"
 #include "TESLA-BATTERY.h"
 #include "TEST-FAKE-BATTERY.h"
+#include "BATMAN-BATTERY.h"
 #include "VOLVO-SPA-BATTERY.h"
 #include "VOLVO-SPA-HYBRID-BATTERY.h"
 

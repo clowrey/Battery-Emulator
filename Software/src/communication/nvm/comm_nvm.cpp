@@ -74,6 +74,10 @@ void init_stored_settings() {
   if (temp < 16) {
     datalayer.battery.settings.sofar_user_specified_battery_id = temp;
   }
+  temp = settings.getUInt("BALHYS", false);
+  if (temp != 0) {
+    datalayer.battery.settings.balancing_hysteresis_mV = temp;
+  }
 
 #ifdef COMMON_IMAGE
   user_selected_battery_type = (BatteryType)settings.getUInt("BATTTYPE", (int)BatteryType::None);
@@ -141,6 +145,9 @@ void store_settings() {
   }
   if (!settings.putUInt("SOFAR_ID", datalayer.battery.settings.sofar_user_specified_battery_id)) {
     set_event(EVENT_PERSISTENT_SAVE_INFO, 12);
+  }
+  if (!settings.putUInt("BALHYS", datalayer.battery.settings.balancing_hysteresis_mV)) {
+    set_event(EVENT_PERSISTENT_SAVE_INFO, 13);
   }
 
   settings.end();  // Close preferences handle

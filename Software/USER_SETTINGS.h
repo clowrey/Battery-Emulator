@@ -47,11 +47,12 @@
 //#define VOLVO_SPA_BATTERY
 //#define VOLVO_SPA_HYBRID_BATTERY
 //#define TEST_FAKE_BATTERY
+#define BATMAN_BATTERY
 //#define DOUBLE_BATTERY  //Enable this line if you use two identical batteries at the same time (requires separate CAN setup)
 
 /* Select inverter communication protocol. See Wiki for which to use with your inverter: https://github.com/dalathegreat/Battery-Emulator/wiki */
 //#define AFORE_CAN        //Enable this line to emulate an "Afore battery" over CAN bus
-//#define BYD_CAN          //Enable this line to emulate a "BYD Battery-Box Premium HVS" over CAN Bus
+#define BYD_CAN          //Enable this line to emulate a "BYD Battery-Box Premium HVS" over CAN Bus
 //#define BYD_CAN_DEYE     //Enable this line to emulate a "BYD Battery-Box Premium HVS" over CAN Bus, with Deye specific fixes
 //#define BYD_KOSTAL_RS485 //Enable this line to emulate a "BYD 11kWh HVM battery" over Kostal RS485
 //#define BYD_MODBUS       //Enable this line to emulate a "BYD 11kWh HVM battery" over Modbus RTU
@@ -74,7 +75,7 @@
 //#define HW_LILYGO
 //#define HW_STARK
 //#define HW_3LB
-//#define HW_DEVKIT
+#define HW_DEVKIT
 
 /* Contactor settings. If you have a battery that does not activate contactors via CAN, configure this section */
 #define PRECHARGE_TIME_MS 500  //Precharge time in milliseconds. Modify to suit your inverter (See wiki for more info)
@@ -104,8 +105,8 @@
 //#define INTERLOCK_REQUIRED     //Nissan LEAF specific setting, if enabled requires both high voltage conenctors to be seated before starting
 //#define LOG_TO_SD              //Enable this line to log diagnostic data to SD card (WARNING, raises CPU load, do not use for production)
 //#define LOG_CAN_TO_SD          //Enable this line to log incoming/outgoing CAN & CAN-FD messages to SD card (WARNING, raises CPU load, do not use for production)
-//#define DEBUG_VIA_USB          //Enable this line to have the USB port output serial diagnostic data while program runs (WARNING, raises CPU load, do not use for production)
-//#define DEBUG_VIA_WEB          //Enable this line to log diagnostic data while program runs, which can be viewed via webpage (WARNING, slightly raises CPU load, do not use for production)
+#define DEBUG_VIA_USB          //Enable this line to have the USB port output serial diagnostic data while program runs (WARNING, raises CPU load, do not use for production)
+#define DEBUG_VIA_WEB          //Enable this line to log diagnostic data while program runs, which can be viewed via webpage (WARNING, slightly raises CPU load, do not use for production)
 //#define DEBUG_CAN_DATA  //Enable this line to print incoming/outgoing CAN & CAN-FD messages to USB serial (WARNING, raises CPU load, do not use for production)
 
 /* CAN options */
