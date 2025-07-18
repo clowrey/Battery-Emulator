@@ -43,6 +43,7 @@
 #ifdef MQTT
 #include "src/devboard/mqtt/mqtt.h"
 #endif  // MQTT
+#include "src/communication/serial_api/serial_api.h"
 #endif  // WIFI
 #ifdef PERIODIC_BMS_RESET_AT
 #include "src/devboard/utils/ntp_time.h"
@@ -65,6 +66,7 @@ TaskHandle_t main_loop_task;
 TaskHandle_t connectivity_loop_task;
 TaskHandle_t logging_loop_task;
 TaskHandle_t mqtt_loop_task;
+TaskHandle_t serial_api_loop_task;
 
 Logging logging;
 
@@ -129,6 +131,11 @@ void setup() {
   xTaskCreatePinnedToCore((TaskFunction_t)&mqtt_loop, "mqtt_loop", 4096, NULL, TASK_MQTT_PRIO, &mqtt_loop_task,
                           WIFI_CORE);
 #endif
+
+  // Initialize Serial API (always enabled)
+  init_serial_api();
+  xTaskCreatePinnedToCore((TaskFunction_t)&serial_api_loop, "serial_api_loop", 4096, NULL, TASK_MQTT_PRIO, &serial_api_loop_task,
+                          WIFI_CORE);
 
   xTaskCreatePinnedToCore((TaskFunction_t)&core_loop, "core_loop", 4096, NULL, TASK_CORE_PRIO, &main_loop_task,
                           CORE_FUNCTION_CORE);
@@ -205,6 +212,18 @@ void mqtt_loop(void*) {
   }
 }
 #endif
+
+void serial_api_loop(void*) {
+  esp_task_wdt_add(NULL);  // Register this task with WDT
+
+  while (true) {
+    START_TIME_MEASUREMENT(serial_api);
+    serial_api_loop();
+    END_TIME_MEASUREMENT_MAX(serial_api, datalayer.system.status.mqtt_task_10s_max_us);  // Reuse MQTT timing variable
+    esp_task_wdt_reset();  // Reset watchdog
+    delay(1);
+  }
+}
 
 static std::list<Transmitter*> transmitters;
 
