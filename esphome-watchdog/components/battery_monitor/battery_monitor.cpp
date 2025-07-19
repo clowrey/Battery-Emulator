@@ -8,6 +8,83 @@ namespace battery_monitor {
 
 static const char *const TAG = "battery_monitor";
 
+/**
+ * CRC16 Implementation for Serial API Data Verification
+ * 
+ * This implementation matches the CRC calculation in serial_api.cpp to verify
+ * data integrity of transmitted cell voltage and balancing data.
+ * 
+ * Uses CRC-CCITT polynomial (0x1021) with initial value 0xFFFF
+ * Detects transmission errors, corruption, and data mix-ups
+ */
+
+// CRC16 calculation for data integrity verification (same as serial_api.cpp)
+static uint16_t calculate_crc16(const uint8_t* data, size_t length) {
+  uint16_t crc = 0xFFFF;
+  const uint16_t polynomial = 0x1021; // CRC-CCITT polynomial
+  
+  for (size_t i = 0; i < length; i++) {
+    crc ^= (uint16_t)(data[i] << 8);
+    for (int j = 0; j < 8; j++) {
+      if (crc & 0x8000) {
+        crc = (crc << 1) ^ polynomial;
+      } else {
+        crc <<= 1;
+      }
+    }
+  }
+  return crc;
+}
+
+// Verify CRC for cell voltage data
+static bool verify_cell_voltage_crc(const JsonArray &cell_data, uint16_t expected_crc, size_t num_cells) {
+  if (cell_data.size() != num_cells) {
+    return false;
+  }
+  
+  // Create raw voltage array for CRC calculation (same format as sender)
+  std::vector<uint16_t> voltages_mv(num_cells);
+  for (size_t i = 0; i < num_cells; i++) {
+    if (i < cell_data.size() && cell_data[i].containsKey("voltage")) {
+      float voltage_v = cell_data[i]["voltage"].as<float>();
+      voltages_mv[i] = static_cast<uint16_t>(voltage_v * 1000.0f); // Convert back to mV
+    } else {
+      return false; // Missing data
+    }
+  }
+  
+  uint16_t calculated_crc = calculate_crc16((const uint8_t*)voltages_mv.data(), num_cells * sizeof(uint16_t));
+  return calculated_crc == expected_crc;
+}
+
+// Verify CRC for cell balancing data
+static bool verify_cell_balancing_crc(const JsonArray &cell_data, uint16_t expected_crc, size_t num_cells) {
+  if (cell_data.size() != num_cells) {
+    return false;
+  }
+  
+  // Create raw balancing array for CRC calculation (same format as sender)
+  // Note: std::vector<bool> is specialized, so we use a regular array of bool
+  // and cast to uint8_t* for CRC calculation (matching sender behavior)
+  std::vector<bool> balancing_status(num_cells);
+  for (size_t i = 0; i < num_cells; i++) {
+    if (i < cell_data.size() && cell_data[i].containsKey("balancing")) {
+      balancing_status[i] = cell_data[i]["balancing"].as<bool>();
+    } else {
+      return false; // Missing data
+    }
+  }
+  
+  // Convert to byte array to match sender's CRC calculation
+  std::vector<uint8_t> balancing_bytes(num_cells);
+  for (size_t i = 0; i < num_cells; i++) {
+    balancing_bytes[i] = balancing_status[i] ? 1 : 0;
+  }
+  
+  uint16_t calculated_crc = calculate_crc16(balancing_bytes.data(), num_cells * sizeof(bool));
+  return calculated_crc == expected_crc;
+}
+
 void BatteryMonitorComponent::setup() {
   ESP_LOGCONFIG(TAG, "Setting up Battery Monitor...");
   this->last_data_time_ = millis();
@@ -16,6 +93,8 @@ void BatteryMonitorComponent::setup() {
 void BatteryMonitorComponent::dump_config() {
   ESP_LOGCONFIG(TAG, "Battery Monitor:");
   ESP_LOGCONFIG(TAG, "  Update Interval: %u ms", this->update_interval_);
+  ESP_LOGCONFIG(TAG, "  CRC Verification: Enabled for enhanced data integrity");
+  ESP_LOGCONFIG(TAG, "  Supports both legacy and CRC-enabled data formats");
   this->check_uart_settings(115200);
 }
 
@@ -165,9 +244,72 @@ void BatteryMonitorComponent::handle_info_data(const std::string &json_data) {
 
 void BatteryMonitorComponent::handle_spec_data(const std::string &json_data) {
   DynamicJsonDocument doc(4096);
-  deserializeJson(doc, json_data);
+  DeserializationError error = deserializeJson(doc, json_data);
   
-  if (doc.containsKey("cell_voltages") && doc["cell_voltages"].is<JsonArray>()) {
+  if (error) {
+    ESP_LOGW(TAG, "Failed to parse spec_data JSON: %s", error.c_str());
+    ESP_LOGD(TAG, "  Raw data: %s", json_data.c_str());
+    return;
+  }
+  
+  // Handle new CRC-enabled format
+  if (doc.containsKey("cell_data") && doc["cell_data"].is<JsonArray>() && 
+      doc.containsKey("crc") && doc.containsKey("num_cells")) {
+    
+    JsonArray cell_data = doc["cell_data"];
+    uint16_t received_crc = doc["crc"].as<uint16_t>();
+    size_t num_cells = doc["num_cells"].as<size_t>();
+    
+    ESP_LOGD(TAG, "Received cell voltage data with CRC: %u, num_cells: %zu", received_crc, num_cells);
+    
+    if (cell_data.size() != num_cells) {
+      ESP_LOGW(TAG, "Cell data size mismatch: expected %zu cells, got %zu", num_cells, cell_data.size());
+    }
+    
+    // Verify CRC for data integrity
+    if (verify_cell_voltage_crc(cell_data, received_crc, num_cells)) {
+      ESP_LOGD(TAG, "Cell voltage CRC verification passed (CRC: %u)", received_crc);
+      
+      // Process verified cell data
+      for (size_t i = 0; i < cell_data.size(); ++i) {
+        if (cell_data[i].containsKey("cell") && cell_data[i].containsKey("voltage")) {
+          int cell_number = cell_data[i]["cell"].as<int>() - 1; // Convert from 1-based to 0-based
+          float voltage = cell_data[i]["voltage"].as<float>();
+          
+          auto it = this->cell_voltage_sensors_.find(cell_number);
+          if (it != this->cell_voltage_sensors_.end() && it->second != nullptr) {
+            // Only publish valid voltages (> 10mV = 0.01V)
+            if (voltage > 0.01f) {
+              it->second->publish_state(voltage);
+              ESP_LOGVV(TAG, "Updated cell %d voltage: %.3fV", cell_number + 1, voltage);
+            } else {
+              ESP_LOGD(TAG, "Skipping invalid cell %d voltage: %.3fV (must be > 10mV)", cell_number + 1, voltage);
+            }
+          }
+        }
+      }
+    } else {
+      // Enhanced CRC error debugging
+      ESP_LOGW(TAG, "Cell voltage CRC verification failed!");
+      ESP_LOGW(TAG, "  Expected CRC: %u", received_crc);
+      
+      // Calculate what CRC we got for debugging
+      std::vector<uint16_t> voltages_mv(num_cells);
+      for (size_t i = 0; i < num_cells && i < cell_data.size(); i++) {
+        if (cell_data[i].containsKey("voltage")) {
+          float voltage_v = cell_data[i]["voltage"].as<float>();
+          voltages_mv[i] = static_cast<uint16_t>(voltage_v * 1000.0f);
+        }
+      }
+      uint16_t calculated_crc = calculate_crc16((const uint8_t*)voltages_mv.data(), num_cells * sizeof(uint16_t));
+      ESP_LOGW(TAG, "  Calculated CRC: %u", calculated_crc);
+      ESP_LOGW(TAG, "  Data may be corrupted or transmission error occurred");
+      ESP_LOGD(TAG, "  Cell count: expected=%zu, received=%zu", num_cells, cell_data.size());
+    }
+  }
+  // Handle legacy format for backwards compatibility
+  else if (doc.containsKey("cell_voltages") && doc["cell_voltages"].is<JsonArray>()) {
+    ESP_LOGD(TAG, "Processing legacy cell voltage format (no CRC)");
     JsonArray cell_voltages = doc["cell_voltages"];
     
     for (size_t i = 0; i < cell_voltages.size(); ++i) {
@@ -184,15 +326,100 @@ void BatteryMonitorComponent::handle_spec_data(const std::string &json_data) {
         }
       }
     }
+  } else {
+    ESP_LOGW(TAG, "Unrecognized spec_data format");
+    ESP_LOGD(TAG, "  Raw JSON: %s", json_data.c_str());
+    ESP_LOGD(TAG, "  Expected either 'cell_data' (new format) or 'cell_voltages' (legacy format)");
   }
 }
 
 void BatteryMonitorComponent::handle_balancing_data(const std::string &json_data) {
   DynamicJsonDocument doc(2048);
-  deserializeJson(doc, json_data);
+  DeserializationError error = deserializeJson(doc, json_data);
   
-  // This could be used to create individual cell balancing sensors if needed
-  ESP_LOGD(TAG, "Balancing data received: %s", json_data.c_str());
+  if (error) {
+    ESP_LOGW(TAG, "Failed to parse balancing_data JSON: %s", error.c_str());
+    ESP_LOGD(TAG, "  Raw data: %s", json_data.c_str());
+    return;
+  }
+  
+  // Handle new CRC-enabled format
+  if (doc.containsKey("cell_balancing_data") && doc["cell_balancing_data"].is<JsonArray>() && 
+      doc.containsKey("crc") && doc.containsKey("num_cells")) {
+    
+    JsonArray cell_data = doc["cell_balancing_data"];
+    uint16_t received_crc = doc["crc"].as<uint16_t>();
+    size_t num_cells = doc["num_cells"].as<size_t>();
+    
+    ESP_LOGD(TAG, "Received cell balancing data with CRC: %u, num_cells: %zu", received_crc, num_cells);
+    
+    if (cell_data.size() != num_cells) {
+      ESP_LOGW(TAG, "Balancing data size mismatch: expected %zu cells, got %zu", num_cells, cell_data.size());
+    }
+    
+    // Verify CRC for data integrity
+    if (verify_cell_balancing_crc(cell_data, received_crc, num_cells)) {
+      ESP_LOGD(TAG, "Cell balancing CRC verification passed (CRC: %u)", received_crc);
+      
+      // Count active balancing cells for verification
+      size_t active_cells = 0;
+      for (size_t i = 0; i < cell_data.size(); ++i) {
+        if (cell_data[i].containsKey("cell") && cell_data[i].containsKey("balancing")) {
+          int cell_number = cell_data[i]["cell"].as<int>();
+          bool balancing = cell_data[i]["balancing"].as<bool>();
+          
+          if (balancing) {
+            active_cells++;
+          }
+          
+          ESP_LOGVV(TAG, "Cell %d balancing: %s", cell_number, balancing ? "active" : "inactive");
+        }
+      }
+      
+      ESP_LOGD(TAG, "Verified balancing data: %zu/%zu cells actively balancing", active_cells, num_cells);
+      
+    } else {
+      // Enhanced CRC error debugging
+      ESP_LOGW(TAG, "Cell balancing CRC verification failed!");
+      ESP_LOGW(TAG, "  Expected CRC: %u", received_crc);
+      
+      // Calculate what CRC we got for debugging
+      std::vector<uint8_t> balancing_bytes(num_cells);
+      size_t active_cells = 0;
+      for (size_t i = 0; i < num_cells && i < cell_data.size(); i++) {
+        if (cell_data[i].containsKey("balancing")) {
+          bool balancing = cell_data[i]["balancing"].as<bool>();
+          balancing_bytes[i] = balancing ? 1 : 0;
+          if (balancing) active_cells++;
+        }
+      }
+      uint16_t calculated_crc = calculate_crc16(balancing_bytes.data(), num_cells * sizeof(bool));
+      ESP_LOGW(TAG, "  Calculated CRC: %u", calculated_crc);
+      ESP_LOGW(TAG, "  Data may be corrupted or transmission error occurred");
+      ESP_LOGD(TAG, "  Cell count: expected=%zu, received=%zu", num_cells, cell_data.size());
+      ESP_LOGD(TAG, "  Active balancing cells in corrupted data: %zu", active_cells);
+    }
+  }
+  // Handle legacy format for backwards compatibility
+  else if (doc.containsKey("cell_balancing") && doc["cell_balancing"].is<JsonArray>()) {
+    ESP_LOGD(TAG, "Processing legacy cell balancing format (no CRC)");
+    JsonArray cell_balancing = doc["cell_balancing"];
+    
+    size_t active_cells = 0;
+    for (size_t i = 0; i < cell_balancing.size(); ++i) {
+      bool balancing = cell_balancing[i].as<bool>();
+      if (balancing) {
+        active_cells++;
+      }
+    }
+    
+    ESP_LOGD(TAG, "Legacy balancing data: %zu/%zu cells actively balancing", active_cells, cell_balancing.size());
+    
+  } else {
+    ESP_LOGW(TAG, "Unrecognized balancing_data format");
+    ESP_LOGD(TAG, "  Raw JSON: %s", json_data.c_str());
+    ESP_LOGD(TAG, "  Expected either 'cell_balancing_data' (new format) or 'cell_balancing' (legacy format)");
+  }
 }
 
 void BatteryMonitorComponent::handle_events_data(const std::string &json_data) {

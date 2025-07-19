@@ -8,6 +8,7 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <cstdint>
 
 namespace esphome {
 namespace battery_monitor {
