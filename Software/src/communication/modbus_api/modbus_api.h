@@ -1,8 +1,8 @@
 /**
- * Modbus RTU API for the battery emulator
+ * Modbus RTU API for the battery emulator using eModbus library
  * 
  * This module sends cell voltage data via Modbus RTU over serial interface
- * at regular intervals, optimized for data efficiency by sending binary data
+ * using the eModbus server library for robust protocol handling
  * 
  * Configuration options in USER_SETTINGS.h:
  * - MODBUS_API: Enable/disable the entire Modbus API module
@@ -13,12 +13,12 @@
  * 
  * Usage:
  * - Initialize with init_modbus_api()
- * - Call modbus_api_loop() in main loop
+ * - Call modbus_api_loop() in main loop (no periodic work needed)
  * 
- * Data format: Modbus RTU holding registers with binary cell voltage data and settings
+ * Data format: Modbus RTU holding registers with direct access to datalayer values
  * - Function Code 03 (Read Holding Registers) for reading cell voltages and settings
  * - Function Code 06 (Write Single Register) for writing settings
- * - Each cell voltage is stored as 16-bit value in millivolts
+ * - Each cell voltage is read directly from datalayer in millivolts
  * - Total of 109 registers: 108 cell voltages + 1 settings register
  * - Register mapping: 
  *   - Register 0-107 = Cell voltages 1-108 in mV (Read Only)
@@ -31,16 +31,9 @@
 #include <Arduino.h>
 #include "../../include.h"
 #include "../../../USER_SETTINGS.h"
-
-// Modbus function codes
-#define MODBUS_FUNC_READ_HOLDING_REGISTERS 0x03
-#define MODBUS_FUNC_WRITE_SINGLE_REGISTER 0x06
-
-// Modbus RTU specific constants
-#define MODBUS_RTU_MAX_FRAME_SIZE 256
-#define MODBUS_RTU_CRC_SIZE 2
-#define MODBUS_RTU_ADDR_SIZE 1
-#define MODBUS_RTU_FUNC_SIZE 1
+#include "../../lib/eModbus-eModbus/ModbusServerRTU.h"
+#include "../../lib/eModbus-eModbus/ModbusTypeDefs.h"
+#include "../../devboard/hal/hal.h"
 
 // Cell voltage register mapping
 #define MODBUS_CELL_VOLTAGE_START_REG 0
@@ -53,23 +46,12 @@
 // Total register count
 #define MODBUS_TOTAL_REGISTER_COUNT (MODBUS_CELL_VOLTAGE_COUNT + MODBUS_SETTINGS_COUNT)
 
-// Buffer sizes
-#define MODBUS_API_RX_BUFFER_SIZE 256
-#define MODBUS_API_TX_BUFFER_SIZE 256
-
-// Timing constants
-#define MODBUS_RTU_INTER_FRAME_DELAY_MS 5   // Minimum delay between frames
-#define MODBUS_API_UPDATE_INTERVAL_MS 1000  // Update cell voltages every 1 second
-
+// Function declarations
 void init_modbus_api(void);
 void modbus_api_loop(void);
 
-// Modbus RTU specific functions
-uint16_t calculate_modbus_crc(uint8_t* data, uint16_t length);
-void process_modbus_request(uint8_t* request, uint16_t request_length);
-void send_modbus_response(uint8_t* response, uint16_t response_length);
-void update_cell_voltage_registers(void);
-void update_settings_registers(void);
-void process_write_single_register(uint8_t* request, uint16_t request_length);
+// eModbus worker functions
+ModbusMessage modbus_api_fc03(ModbusMessage request);  // Read Holding Registers
+ModbusMessage modbus_api_fc06(ModbusMessage request);  // Write Single Register
 
 #endif 
