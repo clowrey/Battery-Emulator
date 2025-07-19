@@ -5,11 +5,13 @@
 #include "../../datalayer/datalayer.h"
 #include "../../devboard/utils/timer.h"
 #include "../../devboard/utils/logging.h"
+#include "../nvm/comm_nvm.h"
 
 #ifdef MODBUS_API
 
 // Modbus RTU data storage
-static uint16_t modbus_holding_registers[MODBUS_CELL_VOLTAGE_COUNT];
+static uint16_t modbus_cell_voltage_registers[MODBUS_CELL_VOLTAGE_COUNT];
+static uint16_t modbus_settings_registers[MODBUS_SETTINGS_COUNT];
 static uint8_t modbus_rx_buffer[MODBUS_API_RX_BUFFER_SIZE];
 static uint8_t modbus_tx_buffer[MODBUS_API_TX_BUFFER_SIZE];
 static uint16_t modbus_rx_index = 0;
@@ -26,10 +28,13 @@ void init_modbus_api(void) {
   // Initialize serial port for Modbus RTU communication
   Serial2.begin(MODBUS_API_BAUDRATE, SERIAL_8N1, MODBUS_API_RX_PIN, MODBUS_API_TX_PIN);
   
-  // Initialize holding registers to zero
+  // Initialize cell voltage registers to zero
   for (int i = 0; i < MODBUS_CELL_VOLTAGE_COUNT; i++) {
-    modbus_holding_registers[i] = 0;
+    modbus_cell_voltage_registers[i] = 0;
   }
+  
+  // Initialize settings registers from datalayer
+  update_settings_registers();
   
   // Reset buffers and indices
   modbus_rx_index = 0;
@@ -53,9 +58,10 @@ void modbus_api_loop(void) {
   
   unsigned long current_time = millis();
   
-  // Update cell voltage registers periodically
+  // Update registers periodically
   if (current_time - last_update_time >= MODBUS_API_UPDATE_INTERVAL_MS) {
     update_cell_voltage_registers();
+    update_settings_registers();
     last_update_time = current_time;
   }
   
@@ -99,12 +105,12 @@ void update_cell_voltage_registers(void) {
   
   // Copy actual cell voltages
   for (int i = 0; i < num_cells; i++) {
-    modbus_holding_registers[i] = datalayer.battery.status.cell_voltages_mV[i];
+    modbus_cell_voltage_registers[i] = datalayer.battery.status.cell_voltages_mV[i];
   }
   
   // Fill remaining registers with zero if we have fewer than 108 cells
   for (int i = num_cells; i < MODBUS_CELL_VOLTAGE_COUNT; i++) {
-    modbus_holding_registers[i] = 0;
+    modbus_cell_voltage_registers[i] = 0;
   }
   
 #ifdef DEBUG_LOG
@@ -115,11 +121,29 @@ void update_cell_voltage_registers(void) {
   if (current_time - last_debug_time > 10000) {
     logging.printf("Modbus API: Updated %d cell voltages. First 5 cells: %dmV, %dmV, %dmV, %dmV, %dmV\n",
                    num_cells,
-                   modbus_holding_registers[0],
-                   modbus_holding_registers[1], 
-                   modbus_holding_registers[2],
-                   modbus_holding_registers[3],
-                   modbus_holding_registers[4]);
+                   modbus_cell_voltage_registers[0],
+                   modbus_cell_voltage_registers[1], 
+                   modbus_cell_voltage_registers[2],
+                   modbus_cell_voltage_registers[3],
+                   modbus_cell_voltage_registers[4]);
+    last_debug_time = current_time;
+  }
+#endif
+}
+
+// Update settings registers from datalayer
+void update_settings_registers(void) {
+  // Update balancing hysteresis register
+  modbus_settings_registers[0] = datalayer.battery.settings.balancing_hysteresis_mV;
+  
+#ifdef DEBUG_LOG
+  static unsigned long last_debug_time = 0;
+  unsigned long current_time = millis();
+  
+  // Debug output every 10 seconds
+  if (current_time - last_debug_time > 10000) {
+    logging.printf("Modbus API: Updated settings registers. Balancing hysteresis: %dmV\n",
+                   modbus_settings_registers[0]);
     last_debug_time = current_time;
   }
 #endif
@@ -178,9 +202,9 @@ void process_modbus_request(uint8_t* request, uint16_t request_length) {
       uint16_t register_count = (request[4] << 8) | request[5];
       
       // Validate register range
-      if (start_address >= MODBUS_CELL_VOLTAGE_COUNT || 
+      if (start_address >= MODBUS_TOTAL_REGISTER_COUNT || 
           register_count == 0 || 
-          (start_address + register_count) > MODBUS_CELL_VOLTAGE_COUNT ||
+          (start_address + register_count) > MODBUS_TOTAL_REGISTER_COUNT ||
           register_count > 125) {  // Max registers per response (limited by frame size)
         
         // Send exception response - Illegal Data Address
@@ -209,7 +233,18 @@ void process_modbus_request(uint8_t* request, uint16_t request_length) {
       
       // Copy register data (big-endian format)
       for (uint16_t i = 0; i < register_count; i++) {
-        uint16_t reg_value = modbus_holding_registers[start_address + i];
+        uint16_t current_address = start_address + i;
+        uint16_t reg_value;
+        
+        // Determine which register array to read from
+        if (current_address < MODBUS_CELL_VOLTAGE_COUNT) {
+          // Cell voltage register
+          reg_value = modbus_cell_voltage_registers[current_address];
+        } else {
+          // Settings register
+          reg_value = modbus_settings_registers[current_address - MODBUS_CELL_VOLTAGE_COUNT];
+        }
+        
         modbus_tx_buffer[3 + (i * 2)] = (reg_value >> 8) & 0xFF;      // High byte
         modbus_tx_buffer[3 + (i * 2) + 1] = reg_value & 0xFF;         // Low byte
       }
@@ -224,6 +259,11 @@ void process_modbus_request(uint8_t* request, uint16_t request_length) {
 #ifdef DEBUG_LOG
       logging.printf("Modbus API: Read %d registers starting at %d\n", register_count, start_address);
 #endif
+      break;
+    }
+    
+    case MODBUS_FUNC_WRITE_SINGLE_REGISTER: {
+      process_write_single_register(request, request_length);
       break;
     }
     
@@ -247,6 +287,105 @@ void process_modbus_request(uint8_t* request, uint16_t request_length) {
 #endif
       break;
   }
+}
+
+// Process write single register request
+void process_write_single_register(uint8_t* request, uint16_t request_length) {
+  // Write single register request: Address(1) + Function(1) + Address(2) + Value(2) + CRC(2) = 8 bytes
+  if (request_length != 8) {
+    return;  // Invalid frame length
+  }
+  
+  uint8_t slave_address = request[0];
+  uint16_t register_address = (request[2] << 8) | request[3];
+  uint16_t register_value = (request[4] << 8) | request[5];
+  
+  // Validate register address (only settings registers are writable)
+  if (register_address < MODBUS_CELL_VOLTAGE_COUNT) {
+    // Cell voltage registers are read-only
+    uint8_t exception_response[] = {
+      slave_address,
+      (uint8_t)(MODBUS_FUNC_WRITE_SINGLE_REGISTER | 0x80),  // Error flag
+      0x02,  // Exception code: Illegal Data Address
+      0x00, 0x00  // CRC placeholder
+    };
+    
+    uint16_t crc = calculate_modbus_crc(exception_response, 3);
+    exception_response[3] = crc & 0xFF;
+    exception_response[4] = (crc >> 8) & 0xFF;
+    
+    send_modbus_response(exception_response, 5);
+    return;
+  }
+  
+  if (register_address >= MODBUS_TOTAL_REGISTER_COUNT) {
+    // Invalid register address
+    uint8_t exception_response[] = {
+      slave_address,
+      (uint8_t)(MODBUS_FUNC_WRITE_SINGLE_REGISTER | 0x80),  // Error flag
+      0x02,  // Exception code: Illegal Data Address
+      0x00, 0x00  // CRC placeholder
+    };
+    
+    uint16_t crc = calculate_modbus_crc(exception_response, 3);
+    exception_response[3] = crc & 0xFF;
+    exception_response[4] = (crc >> 8) & 0xFF;
+    
+    send_modbus_response(exception_response, 5);
+    return;
+  }
+  
+  // Handle specific settings registers
+  if (register_address == MODBUS_BALANCING_HYSTERESIS_REG) {
+    // Validate balancing hysteresis range (1-100 mV)
+    if (register_value < 1 || register_value > 100) {
+      uint8_t exception_response[] = {
+        slave_address,
+        (uint8_t)(MODBUS_FUNC_WRITE_SINGLE_REGISTER | 0x80),  // Error flag
+        0x03,  // Exception code: Illegal Data Value
+        0x00, 0x00  // CRC placeholder
+      };
+      
+      uint16_t crc = calculate_modbus_crc(exception_response, 3);
+      exception_response[3] = crc & 0xFF;
+      exception_response[4] = (crc >> 8) & 0xFF;
+      
+      send_modbus_response(exception_response, 5);
+      
+#ifdef DEBUG_LOG
+      logging.printf("Modbus API: Invalid balancing hysteresis value: %d (valid range: 1-100 mV)\n", register_value);
+#endif
+      return;
+    }
+    
+    // Update datalayer and local register
+    datalayer.battery.settings.balancing_hysteresis_mV = register_value;
+    modbus_settings_registers[register_address - MODBUS_CELL_VOLTAGE_COUNT] = register_value;
+    
+    // Store settings to NVM
+    store_settings();
+    
+#ifdef DEBUG_LOG
+    logging.printf("Modbus API: Updated balancing hysteresis to %d mV\n", register_value);
+#endif
+  }
+  
+  // Send successful response (echo the request)
+  uint8_t response[] = {
+    slave_address,
+    MODBUS_FUNC_WRITE_SINGLE_REGISTER,
+    (uint8_t)((register_address >> 8) & 0xFF),  // Register address high byte
+    (uint8_t)(register_address & 0xFF),         // Register address low byte
+    (uint8_t)((register_value >> 8) & 0xFF),    // Register value high byte
+    (uint8_t)(register_value & 0xFF),           // Register value low byte
+    0x00, 0x00  // CRC placeholder
+  };
+  
+  uint16_t crc = calculate_modbus_crc(response, 6);
+  response[6] = crc & 0xFF;
+  response[7] = (crc >> 8) & 0xFF;
+  
+  send_modbus_response(response, 8);
 }
 
 // Send Modbus response
