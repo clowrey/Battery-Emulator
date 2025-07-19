@@ -38,8 +38,8 @@ captive_portal:
 # UART configuration for Modbus RTU communication
 uart:
   id: modbus_uart
-  tx_pin: GPIO22  # Connect to Battery Emulator's Modbus API TX pin
-  rx_pin: GPIO23  # Connect to Battery Emulator's Modbus API RX pin
+  tx_pin: GPIO22  # Connect to Battery Emulator's Modbus API RX pin - Crossover 
+  rx_pin: GPIO23  # Connect to Battery Emulator's Modbus API TX pin - Crossover 
   baud_rate: 115200
   stop_bits: 1
   parity: NONE
