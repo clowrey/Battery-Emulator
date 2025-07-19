@@ -144,16 +144,16 @@
 
 /* Serial API options */
 //#define SERIAL_API  // Enable this line to enable Serial API output (JSON data over serial)
-#define SERIAL_API_USB_SERIAL  // Enable this line to output Serial API data on main USB serial port (Serial)
-#define SERIAL_API_DEDICATED_SERIAL  // Enable this line to output Serial API data on dedicated serial port (Serial2)
-#define SERIAL_API_TX_PIN 22  // TX pin for dedicated Serial API port (Serial2)
-#define SERIAL_API_RX_PIN 23  // RX pin for dedicated Serial API port (Serial2) - not used but required for Serial2 init
-#define SERIAL_API_BAUDRATE 115200  // Baud rate for dedicated Serial API port
+//#define SERIAL_API_USB_SERIAL  // Enable this line to output Serial API data on main USB serial port (Serial)
+//#define SERIAL_API_DEDICATED_SERIAL  // Enable this line to output Serial API data on dedicated serial port (Serial2)
+//#define SERIAL_API_TX_PIN 22  // TX pin for dedicated Serial API port (Serial2)
+//#define SERIAL_API_RX_PIN 23  // RX pin for dedicated Serial API port (Serial2) - not used but required for Serial2 init
+//#define SERIAL_API_BAUDRATE 115200  // Baud rate for dedicated Serial API port
 
 /* Modbus API options */
 #define MODBUS_API  // Enable this line to enable Modbus RTU API for cell voltage data transmission
-#define MODBUS_API_TX_PIN 22  // TX pin for Modbus RTU serial port (Serial2) - shares pins with Serial API
-#define MODBUS_API_RX_PIN 23  // RX pin for Modbus RTU serial port (Serial2) - shares pins with Serial API 
+#define MODBUS_API_TX_PIN 23  // TX pin for Modbus RTU serial port (Serial2) - shares pins with Serial API
+#define MODBUS_API_RX_PIN 22  // RX pin for Modbus RTU serial port (Serial2) - shares pins with Serial API 
 #define MODBUS_API_BAUDRATE 115200  // Baud rate for Modbus RTU communication (standard Modbus rate)
 #define MODBUS_API_SLAVE_ID 1  // Modbus slave ID for this device (1-247)
 

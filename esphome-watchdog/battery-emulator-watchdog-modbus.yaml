@@ -1,0 +1,1907 @@
+substitutions:
+  device_name: battery-emulator-watchdog
+  friendly_name: "Battery Emulator Watchdog"
+
+esphome:
+  name: ${device_name}
+  friendly_name: ${friendly_name}
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+  level: INFO
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "${friendly_name}"
+    password: !secret ap_password
+
+captive_portal:
+
+# UART configuration for Modbus RTU communication
+uart:
+  id: modbus_uart
+  tx_pin: GPIO22  # Connect to Battery Emulator's Modbus API TX pin
+  rx_pin: GPIO23  # Connect to Battery Emulator's Modbus API RX pin
+  baud_rate: 115200
+  stop_bits: 1
+  parity: NONE
+
+# Modbus RTU configuration
+modbus:
+  - id: battery_modbus
+    uart_id: modbus_uart
+    send_wait_time: 250ms
+
+# Modbus controller for Battery Emulator (slave ID 1)
+modbus_controller:
+  - id: battery_emulator
+    modbus_id: battery_modbus
+    address: 1  # Modbus slave ID as configured in Battery Emulator
+    update_interval: 2s  # Read cell voltages every 2 seconds
+
+# Sensors for 108 individual cell voltages
+sensor:
+  # Cell Voltages 1-10
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 1 Voltage"
+    address: 0
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 2 Voltage"
+    address: 1
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 3 Voltage"
+    address: 2
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 4 Voltage"
+    address: 3
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 5 Voltage"
+    address: 4
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 6 Voltage"
+    address: 5
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 7 Voltage"
+    address: 6
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 8 Voltage"
+    address: 7
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 9 Voltage"
+    address: 8
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 10 Voltage"
+    address: 9
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  # Cell Voltages 11-20
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 11 Voltage"
+    address: 10
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 12 Voltage"
+    address: 11
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 13 Voltage"
+    address: 12
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 14 Voltage"
+    address: 13
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 15 Voltage"
+    address: 14
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 16 Voltage"
+    address: 15
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 17 Voltage"
+    address: 16
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 18 Voltage"
+    address: 17
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 19 Voltage"
+    address: 18
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 20 Voltage"
+    address: 19
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  # Cell Voltages 21-30
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 21 Voltage"
+    address: 20
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 22 Voltage"
+    address: 21
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 23 Voltage"
+    address: 22
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 24 Voltage"
+    address: 23
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 25 Voltage"
+    address: 24
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 26 Voltage"
+    address: 25
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 27 Voltage"
+    address: 26
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 28 Voltage"
+    address: 27
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 29 Voltage"
+    address: 28
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 30 Voltage"
+    address: 29
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  # Cell Voltages 31-40
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 31 Voltage"
+    address: 30
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 32 Voltage"
+    address: 31
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 33 Voltage"
+    address: 32
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 34 Voltage"
+    address: 33
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 35 Voltage"
+    address: 34
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 36 Voltage"
+    address: 35
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 37 Voltage"
+    address: 36
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 38 Voltage"
+    address: 37
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 39 Voltage"
+    address: 38
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 40 Voltage"
+    address: 39
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  # Cell Voltages 41-50
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 41 Voltage"
+    address: 40
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 42 Voltage"
+    address: 41
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 43 Voltage"
+    address: 42
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 44 Voltage"
+    address: 43
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 45 Voltage"
+    address: 44
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 46 Voltage"
+    address: 45
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 47 Voltage"
+    address: 46
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 48 Voltage"
+    address: 47
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 49 Voltage"
+    address: 48
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 50 Voltage"
+    address: 49
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  # Cell Voltages 51-60
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 51 Voltage"
+    address: 50
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 52 Voltage"
+    address: 51
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 53 Voltage"
+    address: 52
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 54 Voltage"
+    address: 53
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 55 Voltage"
+    address: 54
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 56 Voltage"
+    address: 55
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 57 Voltage"
+    address: 56
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 58 Voltage"
+    address: 57
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 59 Voltage"
+    address: 58
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 60 Voltage"
+    address: 59
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  # Cell Voltages 61-70
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 61 Voltage"
+    address: 60
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 62 Voltage"
+    address: 61
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 63 Voltage"
+    address: 62
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 64 Voltage"
+    address: 63
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 65 Voltage"
+    address: 64
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 66 Voltage"
+    address: 65
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 67 Voltage"
+    address: 66
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 68 Voltage"
+    address: 67
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 69 Voltage"
+    address: 68
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 70 Voltage"
+    address: 69
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  # Cell Voltages 71-80
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 71 Voltage"
+    address: 70
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 72 Voltage"
+    address: 71
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 73 Voltage"
+    address: 72
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 74 Voltage"
+    address: 73
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 75 Voltage"
+    address: 74
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 76 Voltage"
+    address: 75
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 77 Voltage"
+    address: 76
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 78 Voltage"
+    address: 77
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 79 Voltage"
+    address: 78
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 80 Voltage"
+    address: 79
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  # Cell Voltages 81-90
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 81 Voltage"
+    address: 80
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 82 Voltage"
+    address: 81
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 83 Voltage"
+    address: 82
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 84 Voltage"
+    address: 83
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 85 Voltage"
+    address: 84
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 86 Voltage"
+    address: 85
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 87 Voltage"
+    address: 86
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 88 Voltage"
+    address: 87
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 89 Voltage"
+    address: 88
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 90 Voltage"
+    address: 89
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  # Cell Voltages 91-100
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 91 Voltage"
+    address: 90
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 92 Voltage"
+    address: 91
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 93 Voltage"
+    address: 92
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 94 Voltage"
+    address: 93
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 95 Voltage"
+    address: 94
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 96 Voltage"
+    address: 95
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 97 Voltage"
+    address: 96
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 98 Voltage"
+    address: 97
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 99 Voltage"
+    address: 98
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 100 Voltage"
+    address: 99
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  # Cell Voltages 101-108
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 101 Voltage"
+    address: 100
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 102 Voltage"
+    address: 101
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 103 Voltage"
+    address: 102
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 104 Voltage"
+    address: 103
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 105 Voltage"
+    address: 104
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 106 Voltage"
+    address: 105
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 107 Voltage"
+    address: 106
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts
+
+  - platform: modbus_controller
+    modbus_controller_id: battery_emulator
+    name: "Cell 108 Voltage"
+    address: 107
+    register_type: holding
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    device_class: voltage
+    state_class: measurement
+    value_type: U_WORD
+    filters:
+      - lambda: |-
+          if (x < 10.0) {
+            return {};  // Make sensor unavailable if below 10mV
+          }
+          return x * 0.001;  // Convert millivolts to volts 
