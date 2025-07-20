@@ -269,6 +269,10 @@ typedef struct {
   int64_t mqtt_task_10s_max_us = 0;
   /** Wifi sub-task measurement variable, reset each 10 seconds */
   int64_t wifi_task_10s_max_us = 0;
+  /** Serial API sub-task measurement variable, reset each 10 seconds */
+  int64_t serial_api_task_10s_max_us = 0;
+  /** Modbus API sub-task measurement variable, reset each 10 seconds */
+  int64_t modbus_api_task_10s_max_us = 0;
 
   /** OTA handling function measurement variable */
   int64_t time_ota_us = 0;

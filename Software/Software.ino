@@ -239,7 +239,7 @@ void serial_api_loop(void*) {
   while (true) {
     START_TIME_MEASUREMENT(serial_api);
     serial_api_loop();
-    END_TIME_MEASUREMENT_MAX(serial_api, datalayer.system.status.mqtt_task_10s_max_us);  // Reuse MQTT timing variable
+    END_TIME_MEASUREMENT_MAX(serial_api, datalayer.system.status.serial_api_task_10s_max_us);
     esp_task_wdt_reset();  // Reset watchdog
     delay(1);
   }
@@ -253,7 +253,7 @@ void modbus_api_loop(void*) {
   while (true) {
     START_TIME_MEASUREMENT(modbus_api);
     modbus_api_loop();
-    END_TIME_MEASUREMENT_MAX(modbus_api, datalayer.system.status.mqtt_task_10s_max_us);  // Reuse MQTT timing variable
+    END_TIME_MEASUREMENT_MAX(modbus_api, datalayer.system.status.modbus_api_task_10s_max_us);
     esp_task_wdt_reset();  // Reset watchdog
     delay(1);
   }
