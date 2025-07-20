@@ -40,7 +40,7 @@ uart:
   id: modbus_uart
   tx_pin: GPIO22  # Connect to Battery Emulator's Modbus API RX pin - Crossover 
   rx_pin: GPIO23  # Connect to Battery Emulator's Modbus API TX pin - Crossover 
-  baud_rate: 115200
+  baud_rate: 921600
   stop_bits: 1
   parity: NONE
 
